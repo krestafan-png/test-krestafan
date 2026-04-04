@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Test Dashboard — krestafan</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+  body { background: #0f172a; }
+  .card { background: #1e293b; border: 1px solid #334155; }
+  .glow { box-shadow: 0 0 20px rgba(99,102,241,0.15); }
+
+  /* Chat */
+  .chat-toggle {
+    position: fixed; bottom: 20px; right: 20px; z-index: 50;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #06b6d4);
+    border: none; cursor: pointer; color: #fff; font-size: 24px;
+    box-shadow: 0 4px 24px rgba(99,102,241,0.4);
+    transition: transform 0.2s;
+  }
+  .chat-toggle:hover { transform: scale(1.1); }
+
+  .chat-panel {
+    position: fixed; bottom: 0; right: 0; z-index: 50;
+    width: 100%; height: 70vh;
+    background: #0f172a; border-top: 1px solid #334155;
+    border-radius: 16px 16px 0 0;
+    display: none; flex-direction: column;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.5);
+    overflow: hidden;
+  }
+  @media(min-width:640px) {
+    .chat-panel {
+      bottom: 88px; right: 20px;
+      width: 400px; height: 520px;
+      border-radius: 16px;
+      border: 1px solid #334155;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    }
+  }
+  .chat-panel.open { display: flex; }
+
+  .chat-header {
+    padding: 14px 16px; border-bottom: 1px solid #1e293b;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 16px;
+    display: flex; flex-direction: column; gap: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.6; word-wrap: break-word; }
+  .msg-user { align-self: flex-end; background: #4f46e5; color: #fff; border-bottom-right-radius: 4px; }
+  .msg-ai { align-self: flex-start; background: #1e293b; color: #e2e8f0; border-bottom-left-radius: 4px; white-space: pre-wrap; }
+
+  .msg-typing { align-self: flex-start; background: #1e293b; color: #64748b; padding: 10px 14px; border-radius: 12px; border-bottom-left-radius: 4px; }
+  .typing-dots span { animation: blink 1.4s infinite; }
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,60%,100% { opacity: 0.2; } 30% { opacity: 1; } }
+
+  .chat-input-area {
+    padding: 12px; border-top: 1px solid #1e293b;
+    display: flex; gap: 8px; flex-shrink: 0;
+  }
+  .chat-input-area input {
+    flex: 1; background: #1e293b; border: 1px solid #334155;
+    border-radius: 10px; padding: 10px 14px; color: #e2e8f0;
+    font-size: 16px; outline: none;
+    -webkit-appearance: none;
+  }
+  .chat-input-area input:focus { border-color: #6366f1; }
+  .chat-input-area input::placeholder { color: #475569; }
+  .chat-input-area button {
+    background: #6366f1; border: none; border-radius: 10px;
+    padding: 0 16px; color: #fff; cursor: pointer; font-size: 16px;
+    min-width: 48px; flex-shrink: 0;
+  }
+  .chat-input-area button:disabled { opacity: 0.4; }
+
+  .chat-error { color: #f87171; font-size: 13px; padding: 8px 12px; background: rgba(248,113,113,0.1); border-radius: 8px; }
+</style>
+</head>
+<body class="min-h-screen text-white font-sans p-4 md:p-8">
+
+<div class="max-w-5xl mx-auto pb-20">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h1 class="text-2xl md:text-3xl font-bold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
+        Test Dashboard
+      </h1>
+      <p class="text-slate-500 text-sm mt-1">krestafan — тестовая панель</p>
+    </div>
+    <div class="text-xs text-slate-600" id="clock"></div>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+    <div class="card rounded-xl p-4 glow">
+      <div class="text-xs text-slate-500 uppercase tracking-wider">Пользователи</div>
+      <div class="text-2xl font-bold mt-1 text-indigo-400" id="stat1">0</div>
+      <div class="text-xs text-emerald-400 mt-1">+12.5%</div>
+    </div>
+    <div class="card rounded-xl p-4 glow">
+      <div class="text-xs text-slate-500 uppercase tracking-wider">Выручка</div>
+      <div class="text-2xl font-bold mt-1 text-cyan-400" id="stat2">0</div>
+      <div class="text-xs text-emerald-400 mt-1">+8.3%</div>
+    </div>
+    <div class="card rounded-xl p-4 glow">
+      <div class="text-xs text-slate-500 uppercase tracking-wider">Заказы</div>
+      <div class="text-2xl font-bold mt-1 text-violet-400" id="stat3">0</div>
+      <div class="text-xs text-emerald-400 mt-1">+23.1%</div>
+    </div>
+    <div class="card rounded-xl p-4 glow">
+      <div class="text-xs text-slate-500 uppercase tracking-wider">Конверсия</div>
+      <div class="text-2xl font-bold mt-1 text-amber-400">4.7%</div>
+      <div class="text-xs text-red-400 mt-1">-0.3%</div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="card rounded-xl p-4 md:p-6 mb-6 glow">
+    <div class="text-sm text-slate-400 mb-4">Динамика за 7 дней</div>
+    <div style="height:250px"><canvas id="chart"></canvas></div>
+  </div>
+
+  <!-- Table -->
+  <div class="card rounded-xl p-4 md:p-6 glow">
+    <div class="text-sm text-slate-400 mb-4">Последние операции</div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-slate-500 text-xs uppercase border-b border-slate-700">
+            <th class="text-left py-2 pr-4">ID</th>
+            <th class="text-left py-2 pr-4">Клиент</th>
+            <th class="text-left py-2 pr-4">Сумма</th>
+            <th class="text-left py-2">Статус</th>
+          </tr>
+        </thead>
+        <tbody class="text-slate-300">
+          <tr class="border-b border-slate-800"><td class="py-2.5 pr-4 text-slate-500">#1042</td><td class="pr-4">Иванов А.</td><td class="pr-4">12 400 ₽</td><td><span class="text-xs px-2 py-0.5 rounded-full bg-emerald-400/10 text-emerald-400">Оплачен</span></td></tr>
+          <tr class="border-b border-slate-800"><td class="py-2.5 pr-4 text-slate-500">#1041</td><td class="pr-4">Петрова М.</td><td class="pr-4">8 750 ₽</td><td><span class="text-xs px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400">В работе</span></td></tr>
+          <tr class="border-b border-slate-800"><td class="py-2.5 pr-4 text-slate-500">#1040</td><td class="pr-4">Сидоров К.</td><td class="pr-4">23 100 ₽</td><td><span class="text-xs px-2 py-0.5 rounded-full bg-emerald-400/10 text-emerald-400">Оплачен</span></td></tr>
+          <tr class="border-b border-slate-800"><td class="py-2.5 pr-4 text-slate-500">#1039</td><td class="pr-4">Козлова Е.</td><td class="pr-4">5 200 ₽</td><td><span class="text-xs px-2 py-0.5 rounded-full bg-red-400/10 text-red-400">Отменён</span></td></tr>
+          <tr><td class="py-2.5 pr-4 text-slate-500">#1038</td><td class="pr-4">Новиков Д.</td><td class="pr-4">17 800 ₽</td><td><span class="text-xs px-2 py-0.5 rounded-full bg-emerald-400/10 text-emerald-400">Оплачен</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="text-center text-slate-700 text-xs mt-6">test-krestafan · GitHub Pages</div>
+</div>
+
+<!-- Chat Toggle -->
+<button class="chat-toggle" id="chatToggle">💬</button>
+
+<!-- Chat Panel -->
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-header">
+    <div>
+      <div class="text-sm font-semibold text-white">AI Ассистент</div>
+      <div class="text-xs text-slate-500">Gemini 2.5 Flash</div>
+    </div>
+    <button onclick="toggleChat()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:20px;padding:4px">✕</button>
+  </div>
+  <div class="chat-messages" id="chatMessages"></div>
+  <div class="chat-input-area" id="chatInputArea">
+    <input type="text" id="msgInput" placeholder="Напиши сообщение..." autocomplete="off" />
+    <button id="sendBtn" onclick="sendMessage()">➤</button>
+  </div>
+</div>
+
+<script>
+// ─── Dashboard ──────────────────────────────
+function animateCounter(id, target, suffix) {
+  suffix = suffix || '';
+  var current = 0;
+  var step = target / 40;
+  var el = document.getElementById(id);
+  var timer = setInterval(function() {
+    current += step;
+    if (current >= target) { current = target; clearInterval(timer); }
+    el.textContent = Math.floor(current).toLocaleString('ru-RU') + suffix;
+  }, 30);
+}
+animateCounter('stat1', 2847, '');
+animateCounter('stat2', 1254, ' тыс. ₽');
+animateCounter('stat3', 384, '');
+
+function updateClock() {
+  document.getElementById('clock').textContent = new Date().toLocaleString('ru-RU');
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+var ctx = document.getElementById('chart').getContext('2d');
+new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
+    datasets: [{
+      label: 'Выручка', data: [142, 185, 161, 203, 178, 224, 195],
+      borderColor: '#818cf8', backgroundColor: 'rgba(129,140,248,0.1)',
+      fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#818cf8', borderWidth: 2
+    }, {
+      label: 'Заказы', data: [48, 62, 55, 71, 59, 78, 65],
+      borderColor: '#22d3ee', backgroundColor: 'rgba(34,211,238,0.1)',
+      fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#22d3ee', borderWidth: 2
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color: '#64748b', font: { size: 12 } } },
+      tooltip: { backgroundColor: '#1e293b', borderColor: '#334155', borderWidth: 1, titleColor: '#e2e8f0', bodyColor: '#94a3b8' }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#475569' } },
+      y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#475569' } }
+    }
+  }
+});
+
+// ─── Chat ───────────────────────────────────
+var GEMINI_KEY = '';
+var chatHistory = [];
+var isTyping = false;
+
+function toggleChat() {
+  document.getElementById('chatPanel').classList.toggle('open');
+  // Prevent body scroll on mobile when chat is open
+  if (document.getElementById('chatPanel').classList.contains('open')) {
+    document.getElementById('msgInput').focus();
+  }
+}
+
+document.getElementById('chatToggle').addEventListener('click', toggleChat);
+
+// Welcome message
+addMessage('ai', 'Привет! Я AI-ассистент. Спрашивай что угодно.');
+
+function addMessage(role, text) {
+  var div = document.createElement('div');
+  div.className = role === 'user' ? 'msg msg-user' : 'msg msg-ai';
+  div.textContent = text;
+  document.getElementById('chatMessages').appendChild(div);
+  document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+  return div;
+}
+
+function showTyping() {
+  var div = document.createElement('div');
+  div.className = 'msg-typing';
+  div.id = 'typingIndicator';
+  div.innerHTML = '<span class="typing-dots"><span>●</span> <span>●</span> <span>●</span></span>';
+  document.getElementById('chatMessages').appendChild(div);
+  document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+}
+
+function hideTyping() {
+  var el = document.getElementById('typingIndicator');
+  if (el) el.remove();
+}
+
+function sendMessage() {
+  var input = document.getElementById('msgInput');
+  var text = input.value.trim();
+  if (!text || isTyping) return;
+
+  addMessage('user', text);
+  input.value = '';
+  isTyping = true;
+  document.getElementById('sendBtn').disabled = true;
+  showTyping();
+
+  chatHistory.push({ role: 'user', parts: [{ text: text }] });
+
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + GEMINI_KEY;
+
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: chatHistory,
+      generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
+    })
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    hideTyping();
+    if (data.error) {
+      addMessage('ai', 'Ошибка: ' + data.error.message);
+    } else if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+      var reply = data.candidates[0].content.parts[0].text;
+      chatHistory.push({ role: 'model', parts: [{ text: reply }] });
+      addMessage('ai', reply);
+    } else {
+      addMessage('ai', 'Нет ответа от модели. Попробуй ещё раз.');
+    }
+  })
+  .catch(function(err) {
+    hideTyping();
+    addMessage('ai', 'Ошибка сети: ' + err.message);
+  })
+  .finally(function() {
+    isTyping = false;
+    document.getElementById('sendBtn').disabled = false;
+    input.focus();
+  });
+}
+
+document.getElementById('msgInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); sendMessage(); }
+});
+</script>
+</body>
+</html>
