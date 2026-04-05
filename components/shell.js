@@ -19,9 +19,14 @@
     var notifCount = dealer.notifications ? dealer.notifications.length : 0;
     var pendingDocs = 2;
 
+    // Add body offset for fixed sidebar + header (don't move DOM nodes)
+    document.body.style.paddingLeft = '240px';
+    document.body.style.paddingTop = '56px';
+
+    // Sidebar (position: fixed — doesn't affect layout)
     var sidebar = document.createElement('aside');
     sidebar.id = 'shell-sidebar';
-    sidebar.style.cssText = 'width:240px;min-height:100vh;background:#0b1120;border-right:1px solid #1e293b;padding:0;position:fixed;top:0;left:0;z-index:40;display:flex;flex-direction:column;';
+    sidebar.style.cssText = 'width:240px;height:100vh;background:#0b1120;border-right:1px solid #1e293b;padding:0;position:fixed;top:0;left:0;z-index:40;display:flex;flex-direction:column;overflow-y:auto;';
 
     var logoHtml = '<div style="padding:20px 20px 16px;border-bottom:1px solid #1e293b">'
       + '<div style="color:#5dcaa5;font-weight:700;font-size:18px;letter-spacing:3px">\u0422\u0420\u0415\u041A</div>'
@@ -56,7 +61,7 @@
 
     sidebar.innerHTML = logoHtml + dealerHtml + navHtml;
 
-    // Header bar
+    // Header bar (position: fixed)
     var header = document.createElement('header');
     header.id = 'shell-header';
     header.style.cssText = 'position:fixed;top:0;left:240px;right:0;height:56px;background:#0f172a;border-bottom:1px solid #1e293b;display:flex;align-items:center;justify-content:space-between;padding:0 24px;z-index:30;';
@@ -93,22 +98,10 @@
     }
     notifPanel.innerHTML = notifHtml;
 
-    // Content wrapper
-    var content = document.createElement('div');
-    content.id = 'shell-content';
-    content.style.cssText = 'margin-left:240px;margin-top:56px;padding:24px;min-height:calc(100vh - 56px);';
-
-    // Move existing body content into wrapper
-    while (document.body.children.length > 0) {
-      var child = document.body.children[0];
-      if (child.tagName === 'SCRIPT') break;
-      content.appendChild(child);
-    }
-
+    // Insert fixed elements at start of body — no DOM rearrangement needed
+    document.body.insertBefore(notifPanel, document.body.firstChild);
+    document.body.insertBefore(header, document.body.firstChild);
     document.body.insertBefore(sidebar, document.body.firstChild);
-    document.body.insertBefore(header, sidebar.nextSibling);
-    document.body.insertBefore(notifPanel, header.nextSibling);
-    document.body.insertBefore(content, notifPanel.nextSibling);
   }
 
   // Load dealer data and build shell
