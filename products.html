@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Каталог продукции — ТРЕК</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+<style>
+  body { background: #0f172a; }
+  .card { background: #1e293b; border: 1px solid #334155; }
+</style>
+</head>
+<body class="min-h-screen text-white font-sans"
+  x-data="{
+    products: [],
+    categories: [],
+    activeCategory: 'all',
+    expandedSku: null,
+    copied: false,
+
+    async init() {
+      try {
+        const res = await fetch('data/products.json');
+        const data = await res.json();
+        this.products = data.products;
+        this.categories = data.categories;
+      } catch (e) {
+        console.error('Failed to load products', e);
+      }
+    },
+
+    get filtered() {
+      if (this.activeCategory === 'all') return this.products;
+      return this.products.filter(p => p.category === this.activeCategory);
+    },
+
+    formatPrice(n) {
+      return n.toLocaleString('ru-RU') + ' \u20BD';
+    },
+
+    toggle(sku) {
+      this.expandedSku = this.expandedSku === sku ? null : sku;
+    },
+
+    async copyUrl(url) {
+      try {
+        await navigator.clipboard.writeText(url);
+        this.copied = true;
+        setTimeout(() => this.copied = false, 2000);
+      } catch (e) {
+        console.error('Copy failed', e);
+      }
+    }
+  }"
+>
+
+  <!-- Page Content -->
+  <div class="max-w-6xl mx-auto">
+
+    <!-- Category Filters -->
+    <div class="flex flex-wrap gap-2 mb-8">
+      <button
+        @click="activeCategory = 'all'"
+        :class="activeCategory === 'all'
+          ? 'bg-[#5dcaa5] text-[#0f172a] font-semibold'
+          : 'bg-[#1e293b] text-slate-400 border border-[#334155] hover:border-[#5dcaa5] hover:text-[#5dcaa5]'"
+        class="px-4 py-2 rounded-lg text-sm transition-colors"
+      >Все</button>
+      <template x-for="cat in categories" :key="cat.id">
+        <button
+          @click="activeCategory = cat.id"
+          :class="activeCategory === cat.id
+            ? 'bg-[#5dcaa5] text-[#0f172a] font-semibold'
+            : 'bg-[#1e293b] text-slate-400 border border-[#334155] hover:border-[#5dcaa5] hover:text-[#5dcaa5]'"
+          class="px-4 py-2 rounded-lg text-sm transition-colors"
+          x-text="cat.label"
+        ></button>
+      </template>
+    </div>
+
+    <!-- Product Grid -->
+    <div class="grid grid-cols-3 gap-6 mb-12">
+      <template x-for="product in filtered" :key="product.sku">
+        <div>
+          <!-- Product Card -->
+          <div
+            class="card rounded-xl overflow-hidden cursor-pointer transition-all hover:border-[#5dcaa5]/50 hover:shadow-lg hover:shadow-[#5dcaa5]/5"
+            @click="toggle(product.sku)"
+          >
+            <img
+              :src="product.photo"
+              :alt="product.name"
+              class="w-full h-48 object-cover"
+            />
+            <div class="p-4">
+              <h3 class="text-base font-semibold text-slate-100" x-text="product.name"></h3>
+              <p class="text-xs text-slate-500 mt-1">Артикул: <span x-text="product.sku"></span></p>
+
+              <div class="flex items-center justify-between mt-3">
+                <span class="text-lg font-bold text-[#818cf8]" x-text="formatPrice(product.price)"></span>
+                <span
+                  x-show="product.inStock"
+                  class="text-xs px-2.5 py-1 rounded-full bg-[#34d399]/10 text-[#34d399]"
+                >
+                  В наличии (<span x-text="product.stockQty"></span> шт.)
+                </span>
+                <span
+                  x-show="!product.inStock"
+                  class="text-xs px-2.5 py-1 rounded-full bg-[#ef4444]/10 text-[#ef4444]"
+                >
+                  Нет в наличии
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Expanded Detail -->
+          <div
+            x-show="expandedSku === product.sku"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 -translate-y-2"
+            x-transition:enter-end="opacity-100 translate-y-0"
+            class="card rounded-xl mt-3 p-5"
+          >
+            <p class="text-sm text-slate-300 leading-relaxed mb-4" x-text="product.description"></p>
+
+            <!-- Specs Table -->
+            <table class="w-full text-sm mb-4">
+              <thead>
+                <tr class="text-xs text-slate-500 uppercase border-b border-slate-700">
+                  <th class="text-left py-2 pr-4">Параметр</th>
+                  <th class="text-left py-2">Значение</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="(spec, idx) in product.specs" :key="idx">
+                  <tr :class="idx % 2 === 0 ? 'bg-[#0f172a]/50' : ''">
+                    <td class="py-2 px-3 text-slate-400" x-text="spec.name"></td>
+                    <td class="py-2 px-3 text-slate-200" x-text="spec.value"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+
+            <a
+              href="orders.html"
+              class="inline-flex items-center gap-2 bg-[#5dcaa5] hover:bg-[#4db892] text-[#0f172a] font-semibold px-5 py-2.5 rounded-lg text-sm transition-colors"
+            >
+              Заказать
+            </a>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- API Documentation -->
+    <div class="card rounded-xl p-6 mb-8">
+      <h2 class="text-lg font-bold text-slate-100 mb-1">API для интеграции</h2>
+      <p class="text-sm text-slate-400 mb-5">REST API для получения данных каталога продукции ТРЕК. Формат ответа — JSON.</p>
+
+      <!-- Endpoint 1 -->
+      <div class="mb-4">
+        <div class="text-xs text-slate-500 uppercase tracking-wider mb-1.5">Список всех товаров</div>
+        <div class="flex items-center gap-3">
+          <code class="flex-1 block bg-[#0b1120] text-[#5dcaa5] text-sm px-4 py-2.5 rounded-lg border border-[#1e293b] font-mono">
+            <span class="text-[#818cf8]">GET</span> /api/products
+          </code>
+          <button
+            @click="copyUrl('/api/products')"
+            class="bg-[#1e293b] border border-[#334155] hover:border-[#5dcaa5] text-slate-400 hover:text-[#5dcaa5] text-xs px-3 py-2.5 rounded-lg transition-colors whitespace-nowrap"
+            x-text="copied ? 'Скопировано!' : 'Скопировать URL'"
+          ></button>
+        </div>
+      </div>
+
+      <!-- Endpoint 2 -->
+      <div class="mb-5">
+        <div class="text-xs text-slate-500 uppercase tracking-wider mb-1.5">Товар по артикулу</div>
+        <div class="flex items-center gap-3">
+          <code class="flex-1 block bg-[#0b1120] text-[#5dcaa5] text-sm px-4 py-2.5 rounded-lg border border-[#1e293b] font-mono">
+            <span class="text-[#818cf8]">GET</span> /api/products/TR-2108
+          </code>
+          <button
+            @click="copyUrl('/api/products/TR-2108')"
+            class="bg-[#1e293b] border border-[#334155] hover:border-[#5dcaa5] text-slate-400 hover:text-[#5dcaa5] text-xs px-3 py-2.5 rounded-lg transition-colors whitespace-nowrap"
+            x-text="copied ? 'Скопировано!' : 'Скопировать URL'"
+          ></button>
+        </div>
+      </div>
+
+      <!-- JSON Response Example -->
+      <div class="text-xs text-slate-500 uppercase tracking-wider mb-1.5">Пример ответа</div>
+      <pre class="bg-[#0b1120] text-slate-300 text-xs leading-relaxed px-5 py-4 rounded-lg border border-[#1e293b] overflow-x-auto font-mono mb-4">{
+  <span class="text-[#5dcaa5]">"sku"</span>: <span class="text-[#f59e0b]">"TR-2108"</span>,
+  <span class="text-[#5dcaa5]">"name"</span>: <span class="text-[#f59e0b]">"Шаровая опора ТРЕК"</span>,
+  <span class="text-[#5dcaa5]">"category"</span>: <span class="text-[#f59e0b]">"ball_joint"</span>,
+  <span class="text-[#5dcaa5]">"price"</span>: <span class="text-[#818cf8]">890</span>,
+  <span class="text-[#5dcaa5]">"inStock"</span>: <span class="text-[#818cf8]">true</span>,
+  <span class="text-[#5dcaa5]">"stockQty"</span>: <span class="text-[#818cf8]">1250</span>,
+  <span class="text-[#5dcaa5]">"description"</span>: <span class="text-[#f59e0b]">"Шаровая опора для автомобилей ВАЗ..."</span>,
+  <span class="text-[#5dcaa5]">"specs"</span>: [
+    { <span class="text-[#5dcaa5]">"name"</span>: <span class="text-[#f59e0b]">"Применяемость"</span>, <span class="text-[#5dcaa5]">"value"</span>: <span class="text-[#f59e0b]">"ВАЗ 2108-2115"</span> }
+  ]
+}</pre>
+
+      <p class="text-xs text-slate-500">
+        Ответ содержит массив объектов <code class="text-[#818cf8]">products</code> и массив <code class="text-[#818cf8]">categories</code>.
+        Каждый товар включает артикул (sku), название, категорию, цену, наличие, остаток, описание и массив характеристик (specs).
+      </p>
+    </div>
+
+  </div>
+
+<script src="components/shell.js"></script>
+</body>
+</html>

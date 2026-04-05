@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Документы — ТРЕК Кабинет дилера</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+  body { background: #0f172a; }
+  [x-cloak] { display: none !important; }
+</style>
+</head>
+<body class="bg-[#0f172a] text-white font-sans min-h-screen"
+      x-data="docsApp()" x-init="init()">
+
+<!-- Expiring alert banner -->
+<template x-for="doc in expiringDocs" :key="doc.id">
+  <div class="mb-4 flex items-center gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl px-5 py-3">
+    <svg class="w-5 h-5 text-amber-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+    </svg>
+    <span class="text-sm text-amber-300">
+      Внимание: <span class="font-semibold" x-text="doc.name"></span> истекает <span class="font-semibold" x-text="doc.expiresAt"></span>
+    </span>
+  </div>
+</template>
+
+<!-- Category tabs -->
+<div class="mb-6 flex items-center gap-2 border-b border-[#334155] pb-0">
+  <button @click="activeCategory = ''"
+          :class="activeCategory === '' ? 'border-[#5dcaa5] text-[#5dcaa5]' : 'border-transparent text-slate-400 hover:text-slate-200'"
+          class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px">
+    Все
+  </button>
+  <template x-for="cat in categories" :key="cat.id">
+    <button @click="activeCategory = cat.id"
+            :class="activeCategory === cat.id ? 'border-[#5dcaa5] text-[#5dcaa5]' : 'border-transparent text-slate-400 hover:text-slate-200'"
+            class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px"
+            x-text="cat.label">
+    </button>
+  </template>
+</div>
+
+<!-- Documents table -->
+<div class="bg-[#1e293b] border border-[#334155] rounded-xl overflow-hidden">
+  <table class="w-full text-sm text-left">
+    <thead>
+      <tr class="border-b border-[#334155] text-slate-400 text-xs uppercase tracking-wider">
+        <th class="px-5 py-3 font-medium">Документ</th>
+        <th class="px-5 py-3 font-medium">Категория</th>
+        <th class="px-5 py-3 font-medium">Статус</th>
+        <th class="px-5 py-3 font-medium">Дата</th>
+        <th class="px-5 py-3 font-medium">Срок действия</th>
+        <th class="px-5 py-3 font-medium text-right">Действия</th>
+      </tr>
+    </thead>
+    <tbody>
+      <template x-for="doc in filteredDocs" :key="doc.id">
+        <tr>
+          <!-- Main row -->
+          <td colspan="6" class="p-0">
+            <div class="border-b border-[#334155]/60">
+              <div class="flex items-center">
+                <div class="px-5 py-3.5 flex-1 min-w-[260px]">
+                  <div class="flex items-center gap-2">
+                    <span class="text-slate-100 font-medium" x-text="doc.name"></span>
+                    <span x-show="doc.isNew"
+                          class="bg-[#5dcaa5]/15 text-[#5dcaa5] text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded">NEW</span>
+                  </div>
+                  <div class="text-xs text-slate-500 mt-0.5" x-text="doc.id"></div>
+                </div>
+                <div class="px-5 py-3.5 w-[140px] text-slate-300" x-text="doc.categoryLabel"></div>
+                <div class="px-5 py-3.5 w-[160px]">
+                  <span class="text-xs font-medium px-2.5 py-1 rounded-full"
+                        :class="statusBadgeClass(doc.status)"
+                        x-text="doc.statusLabel"></span>
+                </div>
+                <div class="px-5 py-3.5 w-[120px] text-slate-400" x-text="doc.date"></div>
+                <div class="px-5 py-3.5 w-[140px]">
+                  <span x-text="doc.expiresAt || '—'" :class="doc.expiresAt ? 'text-slate-300' : 'text-slate-600'"></span>
+                </div>
+                <div class="px-5 py-3.5 w-[120px] flex items-center justify-end gap-2">
+                  <!-- Download button -->
+                  <button class="p-1.5 rounded-lg text-slate-400 hover:text-[#5dcaa5] hover:bg-[#5dcaa5]/10 transition-colors" title="Скачать">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                    </svg>
+                  </button>
+                  <!-- Versions toggle -->
+                  <button @click="expandedId = expandedId === doc.id ? null : doc.id"
+                          class="p-1.5 rounded-lg transition-colors"
+                          :class="expandedId === doc.id ? 'text-[#818cf8] bg-[#818cf8]/10' : 'text-slate-400 hover:text-[#818cf8] hover:bg-[#818cf8]/10'"
+                          title="История версий">
+                    <svg class="w-4 h-4 transition-transform" :class="expandedId === doc.id && 'rotate-180'" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Expanded: version history -->
+              <div x-show="expandedId === doc.id" x-cloak
+                   x-transition:enter="transition ease-out duration-200"
+                   x-transition:enter-start="opacity-0 -translate-y-2"
+                   x-transition:enter-end="opacity-100 translate-y-0"
+                   class="bg-[#0f172a]/50 border-t border-[#334155]/60 px-5 py-4">
+
+                <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">История версий</h4>
+                <table class="w-full text-xs">
+                  <thead>
+                    <tr class="text-slate-500">
+                      <th class="text-left py-1.5 pr-4 font-medium">Версия</th>
+                      <th class="text-left py-1.5 pr-4 font-medium">Дата</th>
+                      <th class="text-left py-1.5 pr-4 font-medium">Автор</th>
+                      <th class="text-left py-1.5 font-medium">Примечание</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="v in doc.versions" :key="v.version">
+                      <tr class="text-slate-300 border-t border-[#334155]/40">
+                        <td class="py-2 pr-4 font-mono text-[#818cf8]" x-text="'v' + v.version"></td>
+                        <td class="py-2 pr-4 text-slate-400" x-text="v.date"></td>
+                        <td class="py-2 pr-4" x-text="v.author"></td>
+                        <td class="py-2 text-slate-400" x-text="v.note"></td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+
+                <!-- Price changes sub-table (for price docs) -->
+                <template x-if="doc.priceChanges && doc.priceChanges.length > 0">
+                  <div class="mt-5">
+                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Изменения цен</h4>
+                    <div class="bg-[#1e293b] border border-[#334155] rounded-lg overflow-hidden">
+                      <table class="w-full text-xs">
+                        <thead>
+                          <tr class="text-slate-500 border-b border-[#334155]">
+                            <th class="text-left px-4 py-2 font-medium">Артикул</th>
+                            <th class="text-left px-4 py-2 font-medium">Товар</th>
+                            <th class="text-right px-4 py-2 font-medium">Старая цена</th>
+                            <th class="text-right px-4 py-2 font-medium">Новая цена</th>
+                            <th class="text-right px-4 py-2 font-medium">Изменение</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <template x-for="pc in doc.priceChanges" :key="pc.sku">
+                            <tr class="border-t border-[#334155]/40">
+                              <td class="px-4 py-2 font-mono text-slate-300" x-text="pc.sku"></td>
+                              <td class="px-4 py-2 text-slate-300" x-text="pc.name"></td>
+                              <td class="px-4 py-2 text-right text-slate-400" x-text="formatPrice(pc.oldPrice)"></td>
+                              <td class="px-4 py-2 text-right font-medium"
+                                  :class="pc.direction === 'up' ? 'text-red-400' : pc.direction === 'down' ? 'text-[#34d399]' : 'text-slate-400'"
+                                  x-text="formatPrice(pc.newPrice)"></td>
+                              <td class="px-4 py-2 text-right font-medium"
+                                  :class="pc.direction === 'up' ? 'text-red-400' : pc.direction === 'down' ? 'text-[#34d399]' : 'text-slate-500'">
+                                <span x-text="priceChangeText(pc)"></span>
+                              </td>
+                            </tr>
+                          </template>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </template>
+
+      <!-- Empty state -->
+      <template x-if="filteredDocs.length === 0">
+        <tr>
+          <td colspan="6" class="text-center py-16 text-slate-500">
+            <svg class="w-10 h-10 mx-auto mb-3 text-slate-600" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Zm3.75 11.625a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"/>
+            </svg>
+            Документы не найдены
+          </td>
+        </tr>
+      </template>
+    </tbody>
+  </table>
+</div>
+
+<script>
+function docsApp() {
+  return {
+    documents: [],
+    categories: [],
+    activeCategory: '',
+    expandedId: null,
+
+    async init() {
+      try {
+        const res = await fetch('data/docs.json');
+        const data = await res.json();
+        this.documents = data.documents || [];
+        this.categories = data.categories || [];
+      } catch (e) {
+        console.error('Failed to load docs data', e);
+      }
+    },
+
+    get expiringDocs() {
+      return this.documents.filter(d => d.status === 'expiring');
+    },
+
+    get filteredDocs() {
+      if (!this.activeCategory) return this.documents;
+      return this.documents.filter(d => d.category === this.activeCategory);
+    },
+
+    statusBadgeClass(status) {
+      const map = {
+        pending_sign:     'bg-amber-400/15 text-amber-400',
+        pending_approval: 'bg-orange-400/15 text-orange-400',
+        signed:           'bg-emerald-400/15 text-emerald-400',
+        expiring:         'bg-red-400/15 text-red-400',
+        archive:          'bg-slate-500/15 text-slate-500',
+        active:           'bg-cyan-400/15 text-cyan-400'
+      };
+      return map[status] || 'bg-slate-400/15 text-slate-400';
+    },
+
+    formatPrice(val) {
+      return new Intl.NumberFormat('ru-RU').format(val) + ' ₽';
+    },
+
+    priceChangeText(pc) {
+      const diff = pc.newPrice - pc.oldPrice;
+      if (pc.direction === 'up') return '+' + new Intl.NumberFormat('ru-RU').format(diff) + ' ₽ ↑';
+      if (pc.direction === 'down') return new Intl.NumberFormat('ru-RU').format(diff) + ' ₽ ↓';
+      return '0 ₽ =';
+    }
+  };
+}
+</script>
+
+<script src="components/shell.js"></script>
+</body>
+</html>

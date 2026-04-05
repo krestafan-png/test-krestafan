@@ -1,323 +1,486 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Test Dashboard — krestafan</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-<style>
-  body { background: #0f172a; }
-  .card { background: #1e293b; border: 1px solid #334155; }
-  .glow { box-shadow: 0 0 20px rgba(99,102,241,0.15); }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Дашборд — ТРЕК Кабинет дилера</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
-  /* Chat */
-  .chat-toggle {
-    position: fixed; bottom: 20px; right: 20px; z-index: 50;
-    width: 56px; height: 56px; border-radius: 50%;
-    background: linear-gradient(135deg, #6366f1, #06b6d4);
-    border: none; cursor: pointer; color: #fff; font-size: 24px;
-    box-shadow: 0 4px 24px rgba(99,102,241,0.4);
-    transition: transform 0.2s;
-  }
-  .chat-toggle:hover { transform: scale(1.1); }
-
-  .chat-panel {
-    position: fixed; bottom: 0; right: 0; z-index: 50;
-    width: 100%; height: 70vh;
-    background: #0f172a; border-top: 1px solid #334155;
-    border-radius: 16px 16px 0 0;
-    display: none; flex-direction: column;
-    box-shadow: 0 -8px 40px rgba(0,0,0,0.5);
-    overflow: hidden;
-  }
-  @media(min-width:640px) {
-    .chat-panel {
-      bottom: 88px; right: 20px;
-      width: 400px; height: 520px;
-      border-radius: 16px;
-      border: 1px solid #334155;
-      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    @keyframes countUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
-  }
-  .chat-panel.open { display: flex; }
+    .kpi-enter { animation: countUp 0.5s ease-out forwards; }
 
-  .chat-header {
-    padding: 14px 16px; border-bottom: 1px solid #1e293b;
-    display: flex; align-items: center; justify-content: space-between;
-    flex-shrink: 0;
-  }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp 0.45s ease-out both; }
+    .fade-up-1 { animation-delay: 0.04s; }
+    .fade-up-2 { animation-delay: 0.08s; }
+    .fade-up-3 { animation-delay: 0.12s; }
+    .fade-up-4 { animation-delay: 0.16s; }
 
-  .chat-messages {
-    flex: 1; overflow-y: auto; padding: 16px;
-    display: flex; flex-direction: column; gap: 12px;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.6; word-wrap: break-word; }
-  .msg-user { align-self: flex-end; background: #4f46e5; color: #fff; border-bottom-right-radius: 4px; }
-  .msg-ai { align-self: flex-start; background: #1e293b; color: #e2e8f0; border-bottom-left-radius: 4px; white-space: pre-wrap; }
-
-  .msg-typing { align-self: flex-start; background: #1e293b; color: #64748b; padding: 10px 14px; border-radius: 12px; border-bottom-left-radius: 4px; }
-  .typing-dots span { animation: blink 1.4s infinite; }
-  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes blink { 0%,60%,100% { opacity: 0.2; } 30% { opacity: 1; } }
-
-  .chat-input-area {
-    padding: 12px; border-top: 1px solid #1e293b;
-    display: flex; gap: 8px; flex-shrink: 0;
-  }
-  .chat-input-area input {
-    flex: 1; background: #1e293b; border: 1px solid #334155;
-    border-radius: 10px; padding: 10px 14px; color: #e2e8f0;
-    font-size: 16px; outline: none;
-    -webkit-appearance: none;
-  }
-  .chat-input-area input:focus { border-color: #6366f1; }
-  .chat-input-area input::placeholder { color: #475569; }
-  .chat-input-area button {
-    background: #6366f1; border: none; border-radius: 10px;
-    padding: 0 16px; color: #fff; cursor: pointer; font-size: 16px;
-    min-width: 48px; flex-shrink: 0;
-  }
-  .chat-input-area button:disabled { opacity: 0.4; }
-
-  .chat-error { color: #f87171; font-size: 13px; padding: 8px 12px; background: rgba(248,113,113,0.1); border-radius: 8px; }
-</style>
+    @keyframes barGrow {
+      from { width: 0; }
+    }
+    .bar-grow { animation: barGrow 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+  </style>
 </head>
-<body class="min-h-screen text-white font-sans p-4 md:p-8">
+<body class="bg-[#0f172a] text-white min-h-screen">
 
-<div class="max-w-5xl mx-auto pb-20">
-  <!-- Header -->
-  <div class="flex items-center justify-between mb-8">
-    <div>
-      <h1 class="text-2xl md:text-3xl font-bold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
-        Test Dashboard
-      </h1>
-      <p class="text-slate-500 text-sm mt-1">krestafan — тестовая панель</p>
-    </div>
-    <div class="text-xs text-slate-600" id="clock"></div>
+  <div id="dashboard"
+       x-data="dashboard()"
+       x-init="init()"
+       x-cloak>
+
+    <!-- ============================================ -->
+    <!-- 1. KPI Cards                                 -->
+    <!-- ============================================ -->
+    <section class="grid grid-cols-4 gap-5 mb-6">
+
+      <!-- Заказов за месяц -->
+      <div class="bg-[#1e293b] border border-[#334155] rounded-xl p-5 fade-up fade-up-1">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs text-slate-400 uppercase tracking-wider font-medium">Заказов за месяц</span>
+          <span class="w-9 h-9 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+            <svg class="w-5 h-5 text-[#818cf8]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+          </span>
+        </div>
+        <div class="flex items-end gap-3">
+          <span class="text-3xl font-bold kpi-enter" x-text="animOrders"></span>
+          <span class="text-sm mb-0.5 font-medium"
+                :class="dealer.monthOrdersDelta >= 0 ? 'text-emerald-400' : 'text-red-400'">
+            <span x-text="dealer.monthOrdersDelta >= 0 ? '\u2191' : '\u2193'"></span>
+            <span x-text="Math.abs(dealer.monthOrdersDelta) + '%'"></span>
+          </span>
+        </div>
+        <div class="mt-3 h-1 rounded-full bg-slate-700 overflow-hidden">
+          <div class="h-1 rounded-full bg-[#818cf8] bar-grow"
+               :style="'width:' + Math.min(dealer.monthOrders / 60 * 100, 100) + '%'"></div>
+        </div>
+      </div>
+
+      <!-- Сумма закупок -->
+      <div class="bg-[#1e293b] border border-[#334155] rounded-xl p-5 fade-up fade-up-2">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs text-slate-400 uppercase tracking-wider font-medium">Сумма закупок</span>
+          <span class="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+            <svg class="w-5 h-5 text-[#5dcaa5]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </span>
+        </div>
+        <div class="flex items-end gap-3">
+          <span class="text-3xl font-bold kpi-enter" x-text="animSum"></span>
+          <span class="text-sm mb-0.5 font-medium"
+                :class="dealer.monthSumDelta >= 0 ? 'text-emerald-400' : 'text-red-400'">
+            <span x-text="dealer.monthSumDelta >= 0 ? '\u2191' : '\u2193'"></span>
+            <span x-text="Math.abs(dealer.monthSumDelta) + '%'"></span>
+          </span>
+        </div>
+        <div class="mt-3 h-1 rounded-full bg-slate-700 overflow-hidden">
+          <div class="h-1 rounded-full bg-[#5dcaa5] bar-grow"
+               :style="'width:' + Math.min(dealer.monthSum / 3000000 * 100, 100) + '%'"></div>
+        </div>
+      </div>
+
+      <!-- Активных рекламаций -->
+      <div class="bg-[#1e293b] border border-[#334155] rounded-xl p-5 fade-up fade-up-3">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs text-slate-400 uppercase tracking-wider font-medium">Активных рекламаций</span>
+          <span class="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center">
+            <svg class="w-5 h-5 text-[#f59e0b]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+          </span>
+        </div>
+        <div class="flex items-end gap-3">
+          <span class="text-3xl font-bold kpi-enter" x-text="animClaims"></span>
+          <template x-if="dealer.overdueClaimCount > 0">
+            <span class="text-sm mb-0.5 font-medium text-red-400">
+              <span x-text="dealer.overdueClaimCount"></span> просроченных
+            </span>
+          </template>
+        </div>
+        <div class="mt-3 flex gap-1">
+          <template x-for="i in 5" :key="i">
+            <div class="h-1 flex-1 rounded-full"
+                 :class="i <= dealer.activeClaims
+                   ? (i <= dealer.overdueClaimCount ? 'bg-[#ef4444]' : 'bg-[#f59e0b]')
+                   : 'bg-slate-700'">
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Геймификация -->
+      <div class="bg-[#1e293b] border border-[#334155] rounded-xl p-5 fade-up fade-up-4">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs text-slate-400 uppercase tracking-wider font-medium">Геймификация</span>
+          <span class="w-9 h-9 rounded-lg bg-purple-500/10 flex items-center justify-center text-lg"
+                x-text="dealer.levelIcon"></span>
+        </div>
+        <div class="text-2xl font-bold kpi-enter" x-text="dealer.levelLabel"></div>
+        <div class="mt-1 flex items-center justify-between text-sm">
+          <span class="text-slate-400">
+            <span class="text-white font-semibold" x-text="animPoints"></span> баллов
+          </span>
+          <span class="text-[#818cf8] font-semibold">#<span x-text="dealer.rank"></span></span>
+        </div>
+        <div class="mt-2 h-1 rounded-full bg-slate-700 overflow-hidden">
+          <div class="h-1 rounded-full bar-grow"
+               style="background: linear-gradient(90deg, #818cf8, #a78bfa);"
+               :style="'width:' + (dealer.points / dealer.nextLevelPoints * 100) + '%'"></div>
+        </div>
+        <div class="mt-1 text-[11px] text-slate-500">
+          до <span x-text="dealer.nextLevelLabel"></span>:
+          <span class="text-slate-400" x-text="(dealer.nextLevelPoints - dealer.points).toLocaleString('ru-RU')"></span> баллов
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================ -->
+    <!-- 2. Charts Row                                -->
+    <!-- ============================================ -->
+    <section class="grid grid-cols-2 gap-5 mb-6">
+
+      <!-- Line chart: Динамика закупок за 6 мес. -->
+      <div class="bg-[#1e293b] border border-[#334155] rounded-xl p-5">
+        <h2 class="text-sm font-semibold text-slate-200 mb-4">Динамика закупок за 6 мес.</h2>
+        <div style="height: 270px;">
+          <canvas id="purchaseChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Horizontal bar: Топ-10 товаров -->
+      <div class="bg-[#1e293b] border border-[#334155] rounded-xl p-5">
+        <h2 class="text-sm font-semibold text-slate-200 mb-4">Топ-10 товаров по закупкам</h2>
+        <div style="height: 270px;">
+          <canvas id="topProductsChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================ -->
+    <!-- 3. Recommendations + Quick Actions           -->
+    <!-- ============================================ -->
+    <section class="grid grid-cols-3 gap-5 mb-6">
+
+      <!-- Рекомендуем заказать (left, 2 cols) -->
+      <div class="col-span-2 bg-[#1e293b] border border-[#334155] rounded-xl p-5">
+        <h2 class="text-sm font-semibold text-slate-200 mb-4">Рекомендуем заказать</h2>
+        <div class="grid grid-cols-3 gap-4">
+          <template x-for="rec in recommendations" :key="rec.sku">
+            <div class="bg-[#0f172a] border border-[#334155] rounded-lg p-4 relative overflow-hidden
+                        hover:border-[#5dcaa5]/40 transition-colors">
+              <!-- Urgent badge -->
+              <template x-if="rec.daysLeft < 14">
+                <div class="absolute top-0 right-0 bg-[#f59e0b] text-[#0f172a] text-[10px] font-bold
+                            px-2 py-0.5 rounded-bl-lg tracking-wide">СРОЧНО</div>
+              </template>
+              <div class="text-[11px] text-slate-500 font-mono mb-1" x-text="rec.sku"></div>
+              <div class="text-sm font-medium text-white mb-3 leading-snug" x-text="rec.name"></div>
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-slate-400">
+                  Ср./мес:
+                  <span class="text-white font-medium" x-text="rec.avgMonthly"></span> шт.
+                </span>
+                <span class="font-semibold px-2 py-0.5 rounded-full text-[11px]"
+                      :class="rec.daysLeft < 14
+                        ? 'bg-[#f59e0b]/15 text-[#f59e0b]'
+                        : 'bg-emerald-500/15 text-[#34d399]'">
+                  <span x-text="rec.daysLeft"></span> дн.
+                </span>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Быстрые действия (right, 1 col) -->
+      <div class="bg-[#1e293b] border border-[#334155] rounded-xl p-5">
+        <h2 class="text-sm font-semibold text-slate-200 mb-4">Быстрые действия</h2>
+        <div class="flex flex-col gap-3">
+
+          <!-- Создать заказ -->
+          <a href="orders.html"
+             class="flex items-center gap-3 bg-[#0f172a] border border-[#334155] rounded-lg p-4
+                    hover:border-[#5dcaa5]/60 hover:bg-[#5dcaa5]/5 transition-all group">
+            <span class="w-10 h-10 rounded-lg bg-[#5dcaa5]/10 flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-[#5dcaa5]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+              </svg>
+            </span>
+            <div>
+              <div class="text-sm font-medium text-white group-hover:text-[#5dcaa5] transition-colors">Создать заказ</div>
+              <div class="text-xs text-slate-500 mt-0.5">Новый заказ поставщику</div>
+            </div>
+          </a>
+
+          <!-- Подать рекламацию -->
+          <a href="claims.html"
+             class="flex items-center gap-3 bg-[#0f172a] border border-[#334155] rounded-lg p-4
+                    hover:border-[#f59e0b]/60 hover:bg-[#f59e0b]/5 transition-all group">
+            <span class="w-10 h-10 rounded-lg bg-[#f59e0b]/10 flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-[#f59e0b]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+            </span>
+            <div>
+              <div class="text-sm font-medium text-white group-hover:text-[#f59e0b] transition-colors">Подать рекламацию</div>
+              <div class="text-xs text-slate-500 mt-0.5">Обращение по качеству</div>
+            </div>
+          </a>
+
+          <!-- Документы на подпись -->
+          <a href="docs.html"
+             class="flex items-center gap-3 bg-[#0f172a] border border-[#334155] rounded-lg p-4
+                    hover:border-[#818cf8]/60 hover:bg-[#818cf8]/5 transition-all group relative">
+            <span class="w-10 h-10 rounded-lg bg-[#818cf8]/10 flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-[#818cf8]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+            </span>
+            <div class="flex-1">
+              <div class="text-sm font-medium text-white group-hover:text-[#818cf8] transition-colors">Документы на подпись</div>
+              <div class="text-xs text-slate-500 mt-0.5">Ожидают подписания</div>
+            </div>
+            <span class="absolute top-3 right-3 min-w-[20px] h-5 rounded-full bg-[#ef4444] text-white text-[11px]
+                         font-bold flex items-center justify-center px-1.5">2</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================ -->
+    <!-- 4. Notification Feed                         -->
+    <!-- ============================================ -->
+    <section class="bg-[#1e293b] border border-[#334155] rounded-xl p-5">
+      <h2 class="text-sm font-semibold text-slate-200 mb-4">Уведомления</h2>
+      <div class="divide-y divide-[#334155]/50">
+        <template x-for="(notif, idx) in notifications" :key="idx">
+          <div class="flex items-center gap-4 px-3 py-3 rounded-lg hover:bg-[#0f172a]/60 transition-colors"
+               :class="idx === 0 ? '' : ''">
+            <span class="text-xl flex-shrink-0 w-8 text-center" x-text="notif.icon"></span>
+            <span class="flex-1 text-sm text-slate-300" x-text="notif.text"></span>
+            <span class="text-xs text-slate-500 flex-shrink-0 whitespace-nowrap" x-text="notif.time"></span>
+          </div>
+        </template>
+      </div>
+    </section>
+
   </div>
 
-  <!-- Stats -->
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
-    <div class="card rounded-xl p-4 glow">
-      <div class="text-xs text-slate-500 uppercase tracking-wider">Пользователи</div>
-      <div class="text-2xl font-bold mt-1 text-indigo-400" id="stat1">0</div>
-      <div class="text-xs text-emerald-400 mt-1">+12.5%</div>
-    </div>
-    <div class="card rounded-xl p-4 glow">
-      <div class="text-xs text-slate-500 uppercase tracking-wider">Выручка</div>
-      <div class="text-2xl font-bold mt-1 text-cyan-400" id="stat2">0</div>
-      <div class="text-xs text-emerald-400 mt-1">+8.3%</div>
-    </div>
-    <div class="card rounded-xl p-4 glow">
-      <div class="text-xs text-slate-500 uppercase tracking-wider">Заказы</div>
-      <div class="text-2xl font-bold mt-1 text-violet-400" id="stat3">0</div>
-      <div class="text-xs text-emerald-400 mt-1">+23.1%</div>
-    </div>
-    <div class="card rounded-xl p-4 glow">
-      <div class="text-xs text-slate-500 uppercase tracking-wider">Конверсия</div>
-      <div class="text-2xl font-bold mt-1 text-amber-400">4.7%</div>
-      <div class="text-xs text-red-400 mt-1">-0.3%</div>
-    </div>
-  </div>
+  <!-- ============================================== -->
+  <!-- Alpine.js data + Chart.js rendering            -->
+  <!-- ============================================== -->
+  <script>
+    function dashboard() {
+      return {
+        dealer: {},
+        recommendations: [],
+        notifications: [],
+        monthlyStats: [],
+        topProducts: [],
 
-  <!-- Chart -->
-  <div class="card rounded-xl p-4 md:p-6 mb-6 glow">
-    <div class="text-sm text-slate-400 mb-4">Динамика за 7 дней</div>
-    <div style="height:250px"><canvas id="chart"></canvas></div>
-  </div>
+        // animated values
+        animOrders: 0,
+        animClaims: 0,
+        animPoints: 0,
+        animSum: '0 \u20BD',
 
-  <!-- Table -->
-  <div class="card rounded-xl p-4 md:p-6 glow">
-    <div class="text-sm text-slate-400 mb-4">Последние операции</div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="text-slate-500 text-xs uppercase border-b border-slate-700">
-            <th class="text-left py-2 pr-4">ID</th>
-            <th class="text-left py-2 pr-4">Клиент</th>
-            <th class="text-left py-2 pr-4">Сумма</th>
-            <th class="text-left py-2">Статус</th>
-          </tr>
-        </thead>
-        <tbody class="text-slate-300">
-          <tr class="border-b border-slate-800"><td class="py-2.5 pr-4 text-slate-500">#1042</td><td class="pr-4">Иванов А.</td><td class="pr-4">12 400 ₽</td><td><span class="text-xs px-2 py-0.5 rounded-full bg-emerald-400/10 text-emerald-400">Оплачен</span></td></tr>
-          <tr class="border-b border-slate-800"><td class="py-2.5 pr-4 text-slate-500">#1041</td><td class="pr-4">Петрова М.</td><td class="pr-4">8 750 ₽</td><td><span class="text-xs px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400">В работе</span></td></tr>
-          <tr class="border-b border-slate-800"><td class="py-2.5 pr-4 text-slate-500">#1040</td><td class="pr-4">Сидоров К.</td><td class="pr-4">23 100 ₽</td><td><span class="text-xs px-2 py-0.5 rounded-full bg-emerald-400/10 text-emerald-400">Оплачен</span></td></tr>
-          <tr class="border-b border-slate-800"><td class="py-2.5 pr-4 text-slate-500">#1039</td><td class="pr-4">Козлова Е.</td><td class="pr-4">5 200 ₽</td><td><span class="text-xs px-2 py-0.5 rounded-full bg-red-400/10 text-red-400">Отменён</span></td></tr>
-          <tr><td class="py-2.5 pr-4 text-slate-500">#1038</td><td class="pr-4">Новиков Д.</td><td class="pr-4">17 800 ₽</td><td><span class="text-xs px-2 py-0.5 rounded-full bg-emerald-400/10 text-emerald-400">Оплачен</span></td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
+        /* ---- lifecycle ---- */
+        async init() {
+          const [dealersData, ordersData] = await Promise.all([
+            fetch('data/dealers.json').then(r => r.json()),
+            fetch('data/orders.json').then(r => r.json())
+          ]);
 
-  <div class="text-center text-slate-700 text-xs mt-6">test-krestafan · GitHub Pages</div>
-</div>
+          this.dealer         = dealersData.current;
+          this.notifications   = dealersData.current.notifications;
+          this.recommendations = ordersData.recommendations || [];
+          this.monthlyStats    = ordersData.monthlyStats    || [];
+          this.topProducts     = ordersData.topProducts     || [];
 
-<!-- Chat Toggle -->
-<button class="chat-toggle" id="chatToggle">💬</button>
+          // Animate KPI counters
+          this._animateValue('animOrders', this.dealer.monthOrders, 850);
+          this._animateValue('animClaims', this.dealer.activeClaims, 650);
+          this._animateValue('animPoints', this.dealer.points, 1000);
+          this._animateSum(this.dealer.monthSum, 950);
 
-<!-- Chat Panel -->
-<div class="chat-panel" id="chatPanel">
-  <div class="chat-header">
-    <div>
-      <div class="text-sm font-semibold text-white">AI Ассистент</div>
-      <div class="text-xs text-slate-500">Gemini 2.5 Flash</div>
-    </div>
-    <button onclick="toggleChat()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:20px;padding:4px">✕</button>
-  </div>
-  <div class="chat-messages" id="chatMessages"></div>
-  <div class="chat-input-area" id="chatInputArea">
-    <input type="text" id="msgInput" placeholder="Напиши сообщение..." autocomplete="off" />
-    <button id="sendBtn" onclick="sendMessage()">➤</button>
-  </div>
-</div>
+          // Render charts on next tick so DOM canvas elements exist
+          this.$nextTick(() => {
+            this._renderPurchaseChart();
+            this._renderTopProductsChart();
+          });
+        },
 
-<script>
-// ─── Dashboard ──────────────────────────────
-function animateCounter(id, target, suffix) {
-  suffix = suffix || '';
-  var current = 0;
-  var step = target / 40;
-  var el = document.getElementById(id);
-  var timer = setInterval(function() {
-    current += step;
-    if (current >= target) { current = target; clearInterval(timer); }
-    el.textContent = Math.floor(current).toLocaleString('ru-RU') + suffix;
-  }, 30);
-}
-animateCounter('stat1', 2847, '');
-animateCounter('stat2', 1254, ' тыс. ₽');
-animateCounter('stat3', 384, '');
+        /* ---- counter animations ---- */
+        _animateValue(prop, target, duration) {
+          const t0 = performance.now();
+          const tick = (now) => {
+            const p = Math.min((now - t0) / duration, 1);
+            const ease = 1 - Math.pow(1 - p, 3);              // easeOutCubic
+            this[prop] = Math.round(target * ease);
+            if (p < 1) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        },
 
-function updateClock() {
-  document.getElementById('clock').textContent = new Date().toLocaleString('ru-RU');
-}
-updateClock();
-setInterval(updateClock, 1000);
+        _animateSum(target, duration) {
+          const t0 = performance.now();
+          const tick = (now) => {
+            const p = Math.min((now - t0) / duration, 1);
+            const ease = 1 - Math.pow(1 - p, 3);
+            this.animSum = this._fmtSum(target * ease);
+            if (p < 1) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        },
 
-var ctx = document.getElementById('chart').getContext('2d');
-new Chart(ctx, {
-  type: 'line',
-  data: {
-    labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
-    datasets: [{
-      label: 'Выручка', data: [142, 185, 161, 203, 178, 224, 195],
-      borderColor: '#818cf8', backgroundColor: 'rgba(129,140,248,0.1)',
-      fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#818cf8', borderWidth: 2
-    }, {
-      label: 'Заказы', data: [48, 62, 55, 71, 59, 78, 65],
-      borderColor: '#22d3ee', backgroundColor: 'rgba(34,211,238,0.1)',
-      fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#22d3ee', borderWidth: 2
-    }]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    plugins: {
-      legend: { labels: { color: '#64748b', font: { size: 12 } } },
-      tooltip: { backgroundColor: '#1e293b', borderColor: '#334155', borderWidth: 1, titleColor: '#e2e8f0', bodyColor: '#94a3b8' }
-    },
-    scales: {
-      x: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#475569' } },
-      y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#475569' } }
+        _fmtSum(v) {
+          if (v >= 1000000) return (v / 1000000).toFixed(1) + ' \u043C\u043B\u043D \u20BD';
+          if (v >= 1000)    return Math.round(v / 1000) + ' \u0442\u044B\u0441. \u20BD';
+          return Math.round(v) + ' \u20BD';
+        },
+
+        /* ---- Chart: Динамика закупок ---- */
+        _renderPurchaseChart() {
+          const el = document.getElementById('purchaseChart');
+          if (!el) return;
+
+          const labels = this.monthlyStats.map(m => m.month);
+          const data   = this.monthlyStats.map(m => m.sum);
+
+          new Chart(el, {
+            type: 'line',
+            data: {
+              labels,
+              datasets: [{
+                data,
+                borderColor: '#818cf8',
+                backgroundColor: (ctx) => {
+                  const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, ctx.chart.height);
+                  g.addColorStop(0, 'rgba(129,140,248,0.18)');
+                  g.addColorStop(1, 'rgba(129,140,248,0.01)');
+                  return g;
+                },
+                fill: true,
+                tension: 0.4,
+                borderWidth: 2.5,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                pointBackgroundColor: '#818cf8',
+                pointBorderColor: '#1e293b',
+                pointBorderWidth: 2
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { intersect: false, mode: 'index' },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: '#1e293b',
+                  borderColor: '#334155',
+                  borderWidth: 1,
+                  titleColor: '#94a3b8',
+                  bodyColor: '#fff',
+                  padding: 12,
+                  cornerRadius: 8,
+                  callbacks: {
+                    label: (c) => (c.parsed.y / 1000000).toFixed(2) + ' \u043C\u043B\u043D \u20BD'
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  grid:  { color: 'rgba(51,65,85,0.35)', drawBorder: false },
+                  ticks: { color: '#64748b', font: { size: 12 } }
+                },
+                y: {
+                  grid:  { color: 'rgba(51,65,85,0.35)', drawBorder: false },
+                  ticks: {
+                    color: '#64748b',
+                    font: { size: 11 },
+                    callback: (v) => (v / 1000000).toFixed(1) + ' \u043C\u043B\u043D'
+                  }
+                }
+              }
+            }
+          });
+        },
+
+        /* ---- Chart: Топ-10 товаров ---- */
+        _renderTopProductsChart() {
+          const el = document.getElementById('topProductsChart');
+          if (!el) return;
+
+          const items = this.topProducts.slice(0, 10);
+
+          new Chart(el, {
+            type: 'bar',
+            data: {
+              labels: items.map(p => p.name),
+              datasets: [{
+                data: items.map(p => p.qty),
+                backgroundColor: 'rgba(93,202,165,0.65)',
+                hoverBackgroundColor: '#5dcaa5',
+                borderColor: '#5dcaa5',
+                borderWidth: 1,
+                borderRadius: 4,
+                barThickness: 24
+              }]
+            },
+            options: {
+              indexAxis: 'y',
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: '#1e293b',
+                  borderColor: '#334155',
+                  borderWidth: 1,
+                  titleColor: '#94a3b8',
+                  bodyColor: '#fff',
+                  padding: 12,
+                  cornerRadius: 8,
+                  callbacks: {
+                    label: (c) => c.parsed.x + ' \u0448\u0442.'
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  grid:  { color: 'rgba(51,65,85,0.35)', drawBorder: false },
+                  ticks: { color: '#64748b', font: { size: 11 } }
+                },
+                y: {
+                  grid:  { display: false },
+                  ticks: { color: '#94a3b8', font: { size: 12 } }
+                }
+              }
+            }
+          });
+        }
+      };
     }
-  }
-});
+  </script>
 
-// ─── Chat ───────────────────────────────────
-var GEMINI_KEY = '';
-var chatHistory = [];
-var isTyping = false;
-
-function toggleChat() {
-  document.getElementById('chatPanel').classList.toggle('open');
-  // Prevent body scroll on mobile when chat is open
-  if (document.getElementById('chatPanel').classList.contains('open')) {
-    document.getElementById('msgInput').focus();
-  }
-}
-
-document.getElementById('chatToggle').addEventListener('click', toggleChat);
-
-// Welcome message
-addMessage('ai', 'Привет! Я AI-ассистент. Спрашивай что угодно.');
-
-function addMessage(role, text) {
-  var div = document.createElement('div');
-  div.className = role === 'user' ? 'msg msg-user' : 'msg msg-ai';
-  div.textContent = text;
-  document.getElementById('chatMessages').appendChild(div);
-  document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
-  return div;
-}
-
-function showTyping() {
-  var div = document.createElement('div');
-  div.className = 'msg-typing';
-  div.id = 'typingIndicator';
-  div.innerHTML = '<span class="typing-dots"><span>●</span> <span>●</span> <span>●</span></span>';
-  document.getElementById('chatMessages').appendChild(div);
-  document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
-}
-
-function hideTyping() {
-  var el = document.getElementById('typingIndicator');
-  if (el) el.remove();
-}
-
-function sendMessage() {
-  var input = document.getElementById('msgInput');
-  var text = input.value.trim();
-  if (!text || isTyping) return;
-
-  addMessage('user', text);
-  input.value = '';
-  isTyping = true;
-  document.getElementById('sendBtn').disabled = true;
-  showTyping();
-
-  chatHistory.push({ role: 'user', parts: [{ text: text }] });
-
-  var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + GEMINI_KEY;
-
-  fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: chatHistory,
-      generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
-    })
-  })
-  .then(function(res) { return res.json(); })
-  .then(function(data) {
-    hideTyping();
-    if (data.error) {
-      addMessage('ai', 'Ошибка: ' + data.error.message);
-    } else if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-      var reply = data.candidates[0].content.parts[0].text;
-      chatHistory.push({ role: 'model', parts: [{ text: reply }] });
-      addMessage('ai', reply);
-    } else {
-      addMessage('ai', 'Нет ответа от модели. Попробуй ещё раз.');
-    }
-  })
-  .catch(function(err) {
-    hideTyping();
-    addMessage('ai', 'Ошибка сети: ' + err.message);
-  })
-  .finally(function() {
-    isTyping = false;
-    document.getElementById('sendBtn').disabled = false;
-    input.focus();
-  });
-}
-
-document.getElementById('msgInput').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') { e.preventDefault(); sendMessage(); }
-});
-</script>
+  <script src="components/shell.js"></script>
 </body>
 </html>

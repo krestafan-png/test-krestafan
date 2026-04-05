@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Рейтинг — ТРЕК</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+  body { background: #0f172a; }
+  .card { background: #1e293b; border: 1px solid #334155; }
+  .glow-green { box-shadow: 0 0 16px rgba(93,202,165,0.25); }
+  .progress-gradient { background: linear-gradient(90deg, #5dcaa5, #818cf8); }
+</style>
+</head>
+<body class="text-slate-200 font-sans min-h-screen"
+      x-data="ratingPage()" x-init="init()">
+
+  <!-- Current Level Card -->
+  <template x-if="loaded">
+    <div>
+      <!-- Current Level -->
+      <div class="card rounded-2xl p-8 mb-8">
+        <div class="flex items-center gap-6">
+          <div class="text-6xl" x-text="current.levelIcon"></div>
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-1">
+              <span class="text-2xl font-bold text-white" x-text="'Уровень: ' + current.levelLabel"></span>
+              <span class="text-sm text-slate-400 bg-slate-700/50 px-3 py-1 rounded-full"
+                    x-text="'#' + current.rank + ' в рейтинге дилеров'"></span>
+            </div>
+            <div class="text-3xl font-bold mt-1" style="color:#5dcaa5"
+                 x-text="Number(current.points).toLocaleString('ru-RU') + ' баллов'"></div>
+            <!-- Progress Bar -->
+            <div class="mt-4">
+              <div class="w-full h-3 bg-slate-700 rounded-full overflow-hidden">
+                <div class="h-full rounded-full progress-gradient transition-all duration-700"
+                     :style="'width:' + progressPercent + '%'"></div>
+              </div>
+              <div class="flex justify-between mt-2 text-xs text-slate-400">
+                <span x-text="currentLevelMin.toLocaleString('ru-RU') + ' б.'"></span>
+                <span class="text-slate-300"
+                      x-text="'До уровня ' + current.nextLevelLabel + ' осталось ' + (current.nextLevelPoints - current.points).toLocaleString('ru-RU') + ' баллов'"></span>
+                <span x-text="current.nextLevelPoints.toLocaleString('ru-RU') + ' б.'"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Achievements -->
+      <h2 class="text-lg font-semibold text-white mb-4">Достижения</h2>
+      <div class="grid grid-cols-3 gap-4 mb-8">
+        <template x-for="a in current.achievements" :key="a.id">
+          <div class="card rounded-xl p-5 text-center transition-all"
+               :class="a.earned ? 'glow-green border-[#5dcaa5]/30' : 'opacity-40 border-dashed'">
+            <div class="text-4xl mb-3" x-text="a.icon"></div>
+            <div class="text-sm font-semibold text-white mb-1" x-text="a.name"></div>
+            <div class="text-xs"
+                 :class="a.earned ? 'text-[#34d399]' : 'text-slate-500'"
+                 x-text="a.earned ? formatDate(a.date) : 'Не получено'"></div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Two columns: Points Rules + Leaderboard -->
+      <div class="grid grid-cols-2 gap-6 mb-8">
+        <!-- Points Rules -->
+        <div>
+          <h2 class="text-lg font-semibold text-white mb-4">Начисление баллов</h2>
+          <div class="card rounded-xl overflow-hidden">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-slate-700 text-left text-xs text-slate-400 uppercase tracking-wider">
+                  <th class="px-5 py-3">Действие</th>
+                  <th class="px-5 py-3 text-right">Баллы</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="(rule, i) in pointRules" :key="i">
+                  <tr class="border-b border-slate-700/50 hover:bg-slate-700/20 transition-colors">
+                    <td class="px-5 py-3 text-slate-300" x-text="rule.action"></td>
+                    <td class="px-5 py-3 text-right font-semibold" style="color:#34d399"
+                        x-text="'+' + rule.points"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Leaderboard -->
+        <div>
+          <h2 class="text-lg font-semibold text-white mb-4">Таблица лидеров</h2>
+          <div class="card rounded-xl overflow-hidden">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-slate-700 text-left text-xs text-slate-400 uppercase tracking-wider">
+                  <th class="px-5 py-3 w-12">#</th>
+                  <th class="px-5 py-3">Дилер</th>
+                  <th class="px-5 py-3 text-right">Баллы</th>
+                  <th class="px-5 py-3 text-right">Уровень</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="row in leaderboard" :key="row.rank">
+                  <tr class="border-b border-slate-700/50 transition-colors"
+                      :class="row.current ? 'bg-[rgba(93,202,165,0.1)]' : 'hover:bg-slate-700/20'">
+                    <td class="px-5 py-3 font-bold"
+                        :class="{
+                          'text-yellow-400': row.rank === 1,
+                          'text-slate-300': row.rank === 2,
+                          'text-amber-600': row.rank === 3,
+                          'text-slate-400': row.rank > 3
+                        }"
+                        x-text="row.rank"></td>
+                    <td class="px-5 py-3"
+                        :class="row.current ? 'text-white font-semibold' : 'text-slate-300'"
+                        x-text="row.name"></td>
+                    <td class="px-5 py-3 text-right font-medium text-slate-200"
+                        x-text="row.points.toLocaleString('ru-RU')"></td>
+                    <td class="px-5 py-3 text-right" x-text="row.levelIcon"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Level Benefits -->
+      <h2 class="text-lg font-semibold text-white mb-4">Уровни и привилегии</h2>
+      <div class="grid grid-cols-5 gap-4 mb-8">
+        <template x-for="lvl in levels" :key="lvl.id">
+          <div class="card rounded-xl p-5 text-center transition-all"
+               :class="lvl.id === current.level ? 'ring-2 ring-[#5dcaa5] glow-green' : ''">
+            <div class="text-4xl mb-2" x-text="lvl.icon"></div>
+            <div class="text-sm font-bold text-white mb-1" x-text="lvl.label"></div>
+            <div class="text-xs text-slate-400 mb-2"
+                 x-text="'от ' + lvl.minPoints.toLocaleString('ru-RU') + ' б.'"></div>
+            <div class="text-lg font-bold mb-1" style="color:#818cf8" x-text="lvl.discount"></div>
+            <div class="text-xs text-slate-400" x-text="lvl.perks"></div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </template>
+
+  <!-- Loading -->
+  <template x-if="!loaded">
+    <div class="flex items-center justify-center h-64">
+      <div class="text-slate-500 text-sm">Загрузка...</div>
+    </div>
+  </template>
+
+  <script src="components/shell.js"></script>
+  <script>
+    function ratingPage() {
+      return {
+        loaded: false,
+        current: {},
+        leaderboard: [],
+        levels: [],
+        pointRules: [],
+        currentLevelMin: 0,
+        progressPercent: 0,
+
+        init() {
+          fetch('data/dealers.json')
+            .then(r => r.json())
+            .then(data => {
+              this.current = data.current;
+              this.leaderboard = data.leaderboard;
+              this.levels = data.levels;
+              this.pointRules = data.pointRules;
+
+              // Find current level min points
+              const lvl = this.levels.find(l => l.id === this.current.level);
+              this.currentLevelMin = lvl ? lvl.minPoints : 0;
+
+              // Calculate progress
+              const range = this.current.nextLevelPoints - this.currentLevelMin;
+              const progress = this.current.points - this.currentLevelMin;
+              this.progressPercent = range > 0 ? Math.min(100, Math.round((progress / range) * 100)) : 100;
+
+              this.loaded = true;
+            });
+        },
+
+        formatDate(dateStr) {
+          if (!dateStr) return 'Не получено';
+          const d = new Date(dateStr);
+          return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+      };
+    }
+  </script>
+</body>
+</html>

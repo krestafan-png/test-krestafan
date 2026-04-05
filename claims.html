@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Рекламации — ТРЕК Кабинет дилера</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+  body { background: #0f172a; }
+  .card { background: #1e293b; border: 1px solid #334155; }
+  .glow { box-shadow: 0 0 20px rgba(99,102,241,0.15); }
+  [x-cloak] { display: none !important; }
+
+  .timeline-line { position: relative; }
+  .timeline-line::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 20px;
+    bottom: 4px;
+    width: 2px;
+    background: #334155;
+  }
+
+  .drop-zone {
+    border: 2px dashed #475569;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .drop-zone:hover {
+    border-color: #5dcaa5;
+    background: rgba(93,202,165,0.05);
+  }
+
+  @keyframes toastIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  @keyframes toastOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+  }
+  .toast-enter { animation: toastIn 0.3s ease-out forwards; }
+  .toast-leave { animation: toastOut 0.3s ease-in forwards; }
+</style>
+</head>
+<body class="text-slate-200 min-h-screen" style="padding-left:240px;">
+
+<div x-data="claimsApp()" x-init="init()" x-cloak class="p-8 max-w-[1400px] mx-auto">
+
+  <!-- Toast container -->
+  <div class="fixed top-6 right-6 z-[100] flex flex-col gap-3">
+    <template x-for="(toast, i) in toasts" :key="toast.id">
+      <div :class="toast.leaving ? 'toast-leave' : 'toast-enter'"
+           class="flex items-center gap-3 px-5 py-3 rounded-lg shadow-lg border"
+           style="background:#1e293b; border-color:#334155;">
+        <svg class="w-5 h-5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <span class="text-sm text-slate-200" x-text="toast.text"></span>
+      </div>
+    </template>
+  </div>
+
+  <!-- Page header -->
+  <div class="mb-8">
+    <h1 class="text-2xl font-bold text-white">Рекламации</h1>
+    <p class="text-sm text-slate-400 mt-1">Управление рекламациями и возвратами</p>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="card rounded-xl p-4 mb-6 flex items-center gap-4 flex-wrap">
+    <!-- Status filter -->
+    <div class="relative">
+      <select x-model="filterStatus"
+              class="appearance-none bg-slate-800 border border-slate-600 text-sm text-slate-200 rounded-lg px-4 py-2 pr-8 focus:outline-none focus:border-indigo-400">
+        <option value="">Все статусы</option>
+        <option value="draft">Черновик</option>
+        <option value="submitted">Подана</option>
+        <option value="review">На рассмотрении</option>
+        <option value="info_requested">Запрос доп. информации</option>
+        <option value="approved">Одобрена</option>
+        <option value="rejected">Отклонена</option>
+        <option value="replacement">Возврат/Замена</option>
+        <option value="closed">Закрыта</option>
+      </select>
+      <svg class="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+    </div>
+
+    <!-- Type filter -->
+    <div class="relative">
+      <select x-model="filterType"
+              class="appearance-none bg-slate-800 border border-slate-600 text-sm text-slate-200 rounded-lg px-4 py-2 pr-8 focus:outline-none focus:border-indigo-400">
+        <option value="">Все типы</option>
+        <template x-for="t in types" :key="t.id">
+          <option :value="t.id" x-text="t.label"></option>
+        </template>
+      </select>
+      <svg class="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+    </div>
+
+    <!-- Search -->
+    <div class="relative flex-1 min-w-[200px]">
+      <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      <input type="text" x-model="search" placeholder="Поиск по номеру, товару..."
+             class="w-full bg-slate-800 border border-slate-600 text-sm text-slate-200 rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:border-indigo-400">
+    </div>
+
+    <!-- Create button -->
+    <button @click="showModal = true"
+            class="ml-auto bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 px-5 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shrink-0">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+      Создать рекламацию
+    </button>
+  </div>
+
+  <!-- Claims table -->
+  <div class="card rounded-xl overflow-hidden">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-slate-700 text-slate-400 text-xs uppercase tracking-wider">
+          <th class="text-left px-5 py-3 font-medium">#</th>
+          <th class="text-left px-5 py-3 font-medium">Дата</th>
+          <th class="text-left px-5 py-3 font-medium">Товар</th>
+          <th class="text-left px-5 py-3 font-medium">Тип</th>
+          <th class="text-left px-5 py-3 font-medium">Статус</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="claim in filtered" :key="claim.id">
+          <tr>
+            <td colspan="5" class="p-0">
+              <!-- Main row -->
+              <div @click="toggle(claim.id)" class="grid grid-cols-[80px_120px_1fr_180px_180px] items-center cursor-pointer hover:bg-slate-700/30 transition-colors"
+                   :class="expanded === claim.id ? 'bg-slate-700/20' : ''">
+                <div class="px-5 py-4 text-indigo-400 font-mono font-semibold" x-text="claim.id"></div>
+                <div class="px-5 py-4 text-slate-400" x-text="claim.date"></div>
+                <div class="px-5 py-4">
+                  <div class="text-slate-200" x-text="claim.productName"></div>
+                  <div class="text-xs text-slate-500" x-text="claim.sku"></div>
+                </div>
+                <div class="px-5 py-4 text-slate-300" x-text="claim.typeLabel"></div>
+                <div class="px-5 py-4">
+                  <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
+                        :class="statusBadge(claim.status)"
+                        x-text="claim.statusLabel"></span>
+                </div>
+              </div>
+
+              <!-- Expandable detail -->
+              <div x-show="expanded === claim.id" x-collapse.duration.200ms
+                   class="border-t border-slate-700/50 bg-slate-800/40 px-6 py-6">
+                <div class="grid grid-cols-3 gap-8">
+
+                  <!-- Timeline -->
+                  <div>
+                    <h4 class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-4">История статусов</h4>
+                    <div class="timeline-line space-y-4">
+                      <template x-for="(step, idx) in claim.timeline" :key="idx">
+                        <div class="flex gap-3 relative">
+                          <div class="w-4 h-4 rounded-full shrink-0 mt-0.5 z-10"
+                               :class="idx === claim.timeline.length - 1 ? 'bg-emerald-400 ring-4 ring-emerald-400/20' : 'bg-slate-500'"></div>
+                          <div>
+                            <div class="text-sm text-slate-200 font-medium" x-text="step.status"></div>
+                            <div class="text-xs text-slate-500 mt-0.5">
+                              <span x-text="step.date"></span> &middot; <span x-text="step.user"></span>
+                            </div>
+                          </div>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+
+                  <!-- Comments -->
+                  <div>
+                    <h4 class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-4">Комментарии</h4>
+                    <div class="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                      <template x-for="(comment, ci) in claim.comments" :key="ci">
+                        <div class="flex gap-3">
+                          <div class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold"
+                               :class="ci % 2 === 0 ? 'bg-indigo-500/20 text-indigo-400' : 'bg-emerald-500/20 text-emerald-400'"
+                               x-text="comment.user.charAt(0)"></div>
+                          <div class="flex-1 rounded-lg p-3 text-sm"
+                               :class="ci % 2 === 0 ? 'bg-slate-700/60' : 'bg-indigo-500/10 border border-indigo-500/20'">
+                            <div class="flex items-center gap-2 mb-1">
+                              <span class="font-semibold text-slate-200 text-xs" x-text="comment.user"></span>
+                              <span class="text-[10px] text-slate-500" x-text="comment.date"></span>
+                            </div>
+                            <p class="text-slate-300 leading-relaxed" x-text="comment.text"></p>
+                          </div>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+
+                  <!-- Details & files -->
+                  <div>
+                    <h4 class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-4">Детали</h4>
+                    <div class="space-y-3 text-sm">
+                      <div class="flex justify-between">
+                        <span class="text-slate-500">Заказ</span>
+                        <span class="text-slate-200 font-mono" x-text="'#' + claim.orderId"></span>
+                      </div>
+                      <div class="flex justify-between">
+                        <span class="text-slate-500">Количество</span>
+                        <span class="text-slate-200" x-text="claim.qty + ' шт.'"></span>
+                      </div>
+                      <div class="flex justify-between">
+                        <span class="text-slate-500">Партия</span>
+                        <span class="text-slate-200 font-mono" x-text="claim.batch"></span>
+                      </div>
+                      <div class="mt-3">
+                        <span class="text-slate-500 block mb-1">Описание</span>
+                        <p class="text-slate-300 text-xs leading-relaxed bg-slate-700/40 rounded-lg p-3" x-text="claim.description"></p>
+                      </div>
+                      <div class="mt-3">
+                        <span class="text-slate-500 block mb-2">Прикрепленные файлы</span>
+                        <div class="flex flex-wrap gap-2">
+                          <template x-for="(photo, pi) in claim.photos" :key="pi">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700/60 text-xs text-slate-300 border border-slate-600">
+                              <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                              <span x-text="photo"></span>
+                            </span>
+                          </template>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+
+    <!-- Empty state -->
+    <div x-show="filtered.length === 0" class="py-16 text-center text-slate-500">
+      <svg class="w-12 h-12 mx-auto mb-3 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      <p>Рекламации не найдены</p>
+    </div>
+  </div>
+
+  <!-- Create claim modal -->
+  <div x-show="showModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center" @keydown.escape.window="showModal = false">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showModal = false"></div>
+    <div class="relative w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-0 mx-4"
+         x-show="showModal"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 scale-95"
+         x-transition:enter-end="opacity-100 scale-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 scale-100"
+         x-transition:leave-end="opacity-0 scale-95">
+
+      <!-- Modal header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+        <h3 class="text-lg font-semibold text-white">Создать рекламацию</h3>
+        <button @click="showModal = false" class="text-slate-400 hover:text-white transition-colors">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Modal body -->
+      <div class="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">Номер заказа</label>
+          <select x-model="form.orderId" class="w-full bg-slate-800 border border-slate-600 text-sm text-slate-200 rounded-lg px-4 py-2.5 focus:outline-none focus:border-indigo-400">
+            <option value="">Выберите заказ...</option>
+            <option value="1041">#1041 от 28.03.2026</option>
+            <option value="1040">#1040 от 21.03.2026</option>
+            <option value="1038">#1038 от 07.03.2026</option>
+            <option value="1035">#1035 от 25.02.2026</option>
+            <option value="1030">#1030 от 14.02.2026</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1.5">Артикул</label>
+            <input type="text" x-model="form.sku" placeholder="TR-XXXX"
+                   class="w-full bg-slate-800 border border-slate-600 text-sm text-slate-200 rounded-lg px-4 py-2.5 focus:outline-none focus:border-indigo-400">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1.5">Наименование товара</label>
+            <input type="text" x-model="form.productName" placeholder="Название детали"
+                   class="w-full bg-slate-800 border border-slate-600 text-sm text-slate-200 rounded-lg px-4 py-2.5 focus:outline-none focus:border-indigo-400">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">Тип рекламации</label>
+          <select x-model="form.type" class="w-full bg-slate-800 border border-slate-600 text-sm text-slate-200 rounded-lg px-4 py-2.5 focus:outline-none focus:border-indigo-400">
+            <option value="">Выберите тип...</option>
+            <template x-for="t in types" :key="t.id">
+              <option :value="t.id" x-text="t.label"></option>
+            </template>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">Описание проблемы</label>
+          <textarea x-model="form.description" rows="4" placeholder="Опишите обнаруженную проблему подробно..."
+                    class="w-full bg-slate-800 border border-slate-600 text-sm text-slate-200 rounded-lg px-4 py-2.5 focus:outline-none focus:border-indigo-400 resize-none"></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1.5">Количество (шт.)</label>
+            <input type="number" x-model="form.qty" min="1" placeholder="1"
+                   class="w-full bg-slate-800 border border-slate-600 text-sm text-slate-200 rounded-lg px-4 py-2.5 focus:outline-none focus:border-indigo-400">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1.5">Номер партии</label>
+            <input type="text" x-model="form.batch" placeholder="P2026-XXXX"
+                   class="w-full bg-slate-800 border border-slate-600 text-sm text-slate-200 rounded-lg px-4 py-2.5 focus:outline-none focus:border-indigo-400">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">Фотографии</label>
+          <div class="drop-zone rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer"
+               @dragover.prevent @drop.prevent>
+            <svg class="w-10 h-10 text-slate-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <p class="text-sm text-slate-400">Перетащите файлы сюда</p>
+            <p class="text-xs text-slate-500 mt-1">или нажмите для выбора</p>
+            <p class="text-[10px] text-slate-600 mt-2">JPG, PNG до 10 МБ</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal footer -->
+      <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-700">
+        <button @click="showModal = false"
+                class="px-5 py-2.5 rounded-lg text-sm text-slate-400 hover:text-white border border-slate-600 hover:border-slate-500 transition-colors">
+          Отмена
+        </button>
+        <button @click="submitClaim()"
+                class="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 transition-colors">
+          Отправить рекламацию
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="components/shell.js"></script>
+<script>
+function claimsApp() {
+  return {
+    claims: [],
+    types: [],
+    statusFlow: [],
+    filterStatus: '',
+    filterType: '',
+    search: '',
+    expanded: null,
+    showModal: false,
+    toasts: [],
+    toastCounter: 0,
+    form: {
+      orderId: '',
+      sku: '',
+      productName: '',
+      type: '',
+      description: '',
+      qty: 1,
+      batch: ''
+    },
+
+    async init() {
+      try {
+        const res = await fetch('data/claims.json');
+        const data = await res.json();
+        this.claims = data.claims || [];
+        this.types = data.types || [];
+        this.statusFlow = data.statusFlow || [];
+      } catch (e) {
+        console.error('Failed to load claims data:', e);
+      }
+    },
+
+    get filtered() {
+      return this.claims.filter(c => {
+        if (this.filterStatus && c.status !== this.filterStatus) return false;
+        if (this.filterType && c.type !== this.filterType) return false;
+        if (this.search) {
+          const q = this.search.toLowerCase();
+          const haystack = (c.id + ' ' + c.productName + ' ' + c.sku + ' ' + c.orderId).toLowerCase();
+          if (!haystack.includes(q)) return false;
+        }
+        return true;
+      });
+    },
+
+    toggle(id) {
+      this.expanded = this.expanded === id ? null : id;
+    },
+
+    statusBadge(status) {
+      const map = {
+        draft:          'bg-slate-500/20 text-slate-400 border border-slate-500/30',
+        submitted:      'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30',
+        review:         'bg-amber-500/20 text-amber-400 border border-amber-500/30',
+        info_requested: 'bg-orange-500/20 text-orange-400 border border-orange-500/30',
+        approved:       'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
+        rejected:       'bg-red-500/20 text-red-400 border border-red-500/30',
+        replacement:    'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30',
+        closed:         'bg-slate-500/20 text-slate-500 border border-slate-500/30'
+      };
+      return map[status] || map.draft;
+    },
+
+    submitClaim() {
+      this.showModal = false;
+      this.addToast('Рекламация создана');
+      this.form = { orderId: '', sku: '', productName: '', type: '', description: '', qty: 1, batch: '' };
+    },
+
+    addToast(text) {
+      const id = ++this.toastCounter;
+      this.toasts.push({ id, text, leaving: false });
+      setTimeout(() => {
+        const t = this.toasts.find(t => t.id === id);
+        if (t) t.leaving = true;
+        setTimeout(() => {
+          this.toasts = this.toasts.filter(t => t.id !== id);
+        }, 300);
+      }, 3000);
+    }
+  };
+}
+</script>
+</body>
+</html>

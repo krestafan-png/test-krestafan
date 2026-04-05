@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Заказы — ТРЕК Кабинет дилера</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+  body { background: #0f172a; }
+  .card { background: #1e293b; border: 1px solid #334155; }
+  [x-cloak] { display: none !important; }
+</style>
+</head>
+<body class="min-h-screen bg-[#0f172a] text-white font-sans">
+
+<div id="shell-content" x-data="ordersApp()" x-init="init()" x-cloak class="p-6 lg:p-8 max-w-[1400px] mx-auto">
+
+  <!-- Page Header -->
+  <div class="mb-8">
+    <h1 class="text-2xl font-bold text-white">Заказы</h1>
+    <p class="text-slate-400 text-sm mt-1">Управление заказами и аналитика закупок</p>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="card rounded-xl p-4 mb-6 flex flex-wrap items-end gap-4">
+    <!-- Status -->
+    <div class="flex flex-col gap-1">
+      <label class="text-xs text-slate-400 uppercase tracking-wider">Статус</label>
+      <select x-model="filterStatus"
+        class="bg-[#0f172a] border border-[#334155] text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-[#5dcaa5] min-w-[160px]">
+        <option value="">Все</option>
+        <option value="new">Новый</option>
+        <option value="confirmed">Подтверждён</option>
+        <option value="assembling">В сборке</option>
+        <option value="shipped">Отгружен</option>
+        <option value="delivered">Доставлен</option>
+      </select>
+    </div>
+    <!-- Date From -->
+    <div class="flex flex-col gap-1">
+      <label class="text-xs text-slate-400 uppercase tracking-wider">Дата от</label>
+      <input type="date" x-model="filterDateFrom"
+        class="bg-[#0f172a] border border-[#334155] text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-[#5dcaa5]">
+    </div>
+    <!-- Date To -->
+    <div class="flex flex-col gap-1">
+      <label class="text-xs text-slate-400 uppercase tracking-wider">Дата до</label>
+      <input type="date" x-model="filterDateTo"
+        class="bg-[#0f172a] border border-[#334155] text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-[#5dcaa5]">
+    </div>
+    <!-- Search -->
+    <div class="flex flex-col gap-1 flex-1 min-w-[200px]">
+      <label class="text-xs text-slate-400 uppercase tracking-wider">Поиск</label>
+      <input type="text" x-model="filterSearch" placeholder="Артикул или номер заказа..."
+        class="bg-[#0f172a] border border-[#334155] text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-[#5dcaa5] w-full placeholder-slate-500">
+    </div>
+    <!-- Reset -->
+    <button @click="filterStatus=''; filterDateFrom=''; filterDateTo=''; filterSearch=''"
+      class="text-sm text-slate-400 hover:text-white px-3 py-2 border border-[#334155] rounded-lg hover:border-slate-500 transition-colors">
+      Сбросить
+    </button>
+  </div>
+
+  <!-- Orders Table -->
+  <div class="card rounded-xl overflow-hidden mb-8">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-slate-400 text-xs uppercase tracking-wider border-b border-[#334155]">
+          <th class="text-left py-3 px-4">&#8470;</th>
+          <th class="text-left py-3 px-4">Дата</th>
+          <th class="text-left py-3 px-4">Состав</th>
+          <th class="text-right py-3 px-4">Сумма</th>
+          <th class="text-center py-3 px-4">Статус</th>
+          <th class="text-center py-3 px-4"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="order in filteredOrders" :key="order.id">
+          <tr>
+            <td colspan="6" class="p-0">
+              <div class="border-b border-[#334155]/50">
+                <!-- Clickable row -->
+                <div @click="toggleOrder(order.id)"
+                  class="flex items-center cursor-pointer hover:bg-white/[0.02] transition-colors">
+                  <div class="py-3 px-4 w-[80px] text-slate-300 font-mono text-sm" x-text="'#' + order.id"></div>
+                  <div class="py-3 px-4 w-[110px] text-slate-400" x-text="formatDate(order.date)"></div>
+                  <div class="py-3 px-4 flex-1 text-slate-300 truncate" x-text="orderSummary(order)"></div>
+                  <div class="py-3 px-4 w-[140px] text-right font-semibold text-white" x-text="formatSum(order.sum)"></div>
+                  <div class="py-3 px-4 w-[140px] text-center">
+                    <span class="text-xs px-2.5 py-1 rounded-full font-medium"
+                      :class="statusBadgeClass(order.status)"
+                      x-text="statusMap[order.status]"></span>
+                  </div>
+                  <div class="py-3 px-4 w-[120px] text-center">
+                    <span class="text-xs text-[#5dcaa5] hover:text-[#34d399] transition-colors">
+                      <span x-text="expandedOrder === order.id ? 'Свернуть' : 'Подробнее'"></span>
+                      <svg class="inline-block w-3 h-3 ml-1 transition-transform" :class="expandedOrder === order.id ? 'rotate-180' : ''"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                      </svg>
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Expanded Detail -->
+                <div x-show="expandedOrder === order.id" x-transition x-cloak
+                  class="bg-[#0f172a]/50 border-t border-[#334155]/50">
+                  <div class="p-6 grid grid-cols-3 gap-6">
+
+                    <!-- Order Info + Items -->
+                    <div class="col-span-2 space-y-5">
+                      <!-- Info -->
+                      <div class="flex flex-wrap gap-6 text-sm">
+                        <div>
+                          <span class="text-slate-500">Номер:</span>
+                          <span class="text-white ml-1 font-mono" x-text="'#' + order.id"></span>
+                        </div>
+                        <div>
+                          <span class="text-slate-500">Дата:</span>
+                          <span class="text-white ml-1" x-text="formatDate(order.date)"></span>
+                        </div>
+                        <div>
+                          <span class="text-slate-500">Менеджер:</span>
+                          <span class="text-white ml-1" x-text="order.manager"></span>
+                        </div>
+                      </div>
+
+                      <!-- Items Table -->
+                      <div class="rounded-lg border border-[#334155] overflow-hidden">
+                        <table class="w-full text-sm">
+                          <thead>
+                            <tr class="text-slate-500 text-xs uppercase tracking-wider bg-[#1e293b]/50">
+                              <th class="text-left py-2 px-3">Артикул</th>
+                              <th class="text-left py-2 px-3">Название</th>
+                              <th class="text-right py-2 px-3">Кол-во</th>
+                              <th class="text-right py-2 px-3">Цена</th>
+                              <th class="text-right py-2 px-3">Сумма</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <template x-for="item in order.items" :key="item.sku">
+                              <tr class="border-t border-[#334155]/50 text-slate-300">
+                                <td class="py-2 px-3 font-mono text-xs text-[#818cf8]" x-text="item.sku"></td>
+                                <td class="py-2 px-3" x-text="item.name"></td>
+                                <td class="py-2 px-3 text-right" x-text="item.qty + ' шт.'"></td>
+                                <td class="py-2 px-3 text-right" x-text="formatSum(item.price)"></td>
+                                <td class="py-2 px-3 text-right font-medium text-white" x-text="formatSum(item.sum)"></td>
+                              </tr>
+                            </template>
+                          </tbody>
+                          <tfoot>
+                            <tr class="border-t border-[#334155] text-white font-semibold">
+                              <td colspan="4" class="py-2 px-3 text-right text-slate-400">Итого:</td>
+                              <td class="py-2 px-3 text-right" x-text="formatSum(order.sum)"></td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+
+                      <!-- Documents -->
+                      <div class="flex gap-3">
+                        <button @click.stop="mockDownload('Счёт', order.id)"
+                          class="flex items-center gap-2 px-4 py-2 bg-[#1e293b] border border-[#334155] rounded-lg text-sm text-slate-300 hover:text-white hover:border-[#5dcaa5] transition-colors">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                          </svg>
+                          Счёт
+                        </button>
+                        <button @click.stop="mockDownload('Накладная', order.id)"
+                          class="flex items-center gap-2 px-4 py-2 bg-[#1e293b] border border-[#334155] rounded-lg text-sm text-slate-300 hover:text-white hover:border-[#5dcaa5] transition-colors">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                          </svg>
+                          Накладная
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Timeline -->
+                    <div>
+                      <h4 class="text-xs text-slate-500 uppercase tracking-wider mb-4">История статусов</h4>
+                      <div class="relative pl-6">
+                        <div class="absolute left-[7px] top-1 bottom-1 w-[2px] bg-[#334155]"></div>
+                        <template x-for="(step, idx) in order.timeline" :key="idx">
+                          <div class="relative mb-4 last:mb-0">
+                            <div class="absolute -left-6 top-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center"
+                              :class="idx === order.timeline.length - 1
+                                ? 'bg-[#5dcaa5] border-[#5dcaa5]'
+                                : 'bg-[#1e293b] border-[#334155]'">
+                              <div class="w-1.5 h-1.5 rounded-full"
+                                :class="idx === order.timeline.length - 1 ? 'bg-white' : 'bg-[#5dcaa5]'"></div>
+                            </div>
+                            <div class="text-sm text-white" x-text="step.status"></div>
+                            <div class="text-xs text-slate-500 mt-0.5" x-text="step.date"></div>
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+
+    <!-- Empty state -->
+    <div x-show="filteredOrders.length === 0" class="py-12 text-center text-slate-500">
+      <svg class="w-12 h-12 mx-auto mb-3 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <p>Заказы не найдены</p>
+      <p class="text-sm mt-1">Попробуйте изменить параметры фильтрации</p>
+    </div>
+  </div>
+
+  <!-- Analytics Section -->
+  <div class="mb-8">
+    <button @click="showAnalytics = !showAnalytics"
+      class="flex items-center gap-2 text-lg font-semibold text-white mb-4 hover:text-[#5dcaa5] transition-colors">
+      <svg class="w-5 h-5 transition-transform" :class="showAnalytics ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+      </svg>
+      Аналитика
+    </button>
+
+    <div x-show="showAnalytics" x-transition x-cloak>
+      <div class="grid grid-cols-2 gap-6">
+        <!-- Monthly Purchases Chart -->
+        <div class="card rounded-xl p-5">
+          <h3 class="text-sm text-slate-400 uppercase tracking-wider mb-4">Закупки по месяцам</h3>
+          <div style="height: 280px">
+            <canvas id="monthlyChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Top Products Chart -->
+        <div class="card rounded-xl p-5">
+          <h3 class="text-sm text-slate-400 uppercase tracking-wider mb-4">Топ товаров по количеству</h3>
+          <div style="height: 280px">
+            <canvas id="topProductsChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Forecasting Section -->
+  <div class="mb-8">
+    <h2 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+      <svg class="w-5 h-5 text-[#f59e0b]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+      </svg>
+      Прогноз закупок
+    </h2>
+
+    <div class="grid grid-cols-3 gap-4">
+      <template x-for="rec in recommendations" :key="rec.sku">
+        <div class="card rounded-xl p-5 hover:border-[#5dcaa5]/50 transition-colors">
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <div class="text-xs font-mono text-[#818cf8]" x-text="rec.sku"></div>
+              <div class="text-sm text-white font-medium mt-1" x-text="rec.name"></div>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-[#f59e0b]/10 flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-[#f59e0b]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="text-xs text-slate-500 mb-1">
+            Средний расход: <span class="text-slate-300" x-text="rec.avgMonthly + ' шт./мес.'"></span>
+          </div>
+          <div class="mt-3 px-3 py-2 rounded-lg bg-[#f59e0b]/10 text-[#f59e0b] text-sm font-medium text-center">
+            Рекомендуем заказать через <span x-text="rec.daysLeft"></span> дней
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function ordersApp() {
+  return {
+    orders: [],
+    recommendations: [],
+    monthlyStats: [],
+    topProducts: [],
+    statusFlow: [],
+
+    filterStatus: '',
+    filterDateFrom: '',
+    filterDateTo: '',
+    filterSearch: '',
+
+    expandedOrder: null,
+    showAnalytics: true,
+
+    statusMap: {
+      new: 'Новый',
+      confirmed: 'Подтверждён',
+      assembling: 'В сборке',
+      shipped: 'Отгружен',
+      delivered: 'Доставлен'
+    },
+
+    async init() {
+      try {
+        const res = await fetch('data/orders.json');
+        const data = await res.json();
+        this.orders = data.orders || [];
+        this.recommendations = data.recommendations || [];
+        this.monthlyStats = data.monthlyStats || [];
+        this.topProducts = data.topProducts || [];
+        this.statusFlow = data.statusFlow || [];
+
+        this.$nextTick(() => {
+          this.renderCharts();
+        });
+      } catch (e) {
+        console.error('Failed to load orders data:', e);
+      }
+    },
+
+    get filteredOrders() {
+      return this.orders.filter(o => {
+        if (this.filterStatus && o.status !== this.filterStatus) return false;
+        if (this.filterDateFrom && o.date < this.filterDateFrom) return false;
+        if (this.filterDateTo && o.date > this.filterDateTo) return false;
+
+        if (this.filterSearch) {
+          const q = this.filterSearch.toLowerCase();
+          const matchId = o.id.toLowerCase().includes(q);
+          const matchSku = o.items.some(item => item.sku.toLowerCase().includes(q));
+          if (!matchId && !matchSku) return false;
+        }
+
+        return true;
+      });
+    },
+
+    toggleOrder(id) {
+      this.expandedOrder = this.expandedOrder === id ? null : id;
+    },
+
+    formatDate(dateStr) {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    },
+
+    formatSum(value) {
+      return value.toLocaleString('ru-RU') + ' \u20BD';
+    },
+
+    orderSummary(order) {
+      if (!order.items || order.items.length === 0) return '\u2014';
+      const first = order.items[0].name;
+      if (order.items.length === 1) return first;
+      return first + ' + ещё ' + (order.items.length - 1);
+    },
+
+    statusBadgeClass(status) {
+      const map = {
+        new: 'bg-indigo-400/15 text-indigo-400',
+        confirmed: 'bg-blue-400/15 text-blue-400',
+        assembling: 'bg-amber-400/15 text-amber-400',
+        shipped: 'bg-cyan-400/15 text-cyan-400',
+        delivered: 'bg-emerald-400/15 text-emerald-400'
+      };
+      return map[status] || 'bg-slate-400/15 text-slate-400';
+    },
+
+    mockDownload(docType, orderId) {
+      alert(docType + ' для заказа #' + orderId + ' — загрузка (демо)');
+    },
+
+    renderCharts() {
+      const monthlyCtx = document.getElementById('monthlyChart');
+      if (monthlyCtx) {
+        new Chart(monthlyCtx.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels: this.monthlyStats.map(s => s.month),
+            datasets: [{
+              label: 'Сумма закупок',
+              data: this.monthlyStats.map(s => s.sum),
+              backgroundColor: 'rgba(93, 202, 165, 0.3)',
+              borderColor: '#5dcaa5',
+              borderWidth: 2,
+              borderRadius: 6,
+              hoverBackgroundColor: 'rgba(93, 202, 165, 0.5)'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: '#1e293b',
+                borderColor: '#334155',
+                borderWidth: 1,
+                titleColor: '#e2e8f0',
+                bodyColor: '#94a3b8',
+                callbacks: {
+                  label: function(ctx) {
+                    return ctx.parsed.y.toLocaleString('ru-RU') + ' \u20BD';
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: { color: 'rgba(255,255,255,0.03)' },
+                ticks: { color: '#64748b' }
+              },
+              y: {
+                grid: { color: 'rgba(255,255,255,0.05)' },
+                ticks: {
+                  color: '#64748b',
+                  callback: function(v) { return (v / 1000000).toFixed(1) + ' млн'; }
+                }
+              }
+            }
+          }
+        });
+      }
+
+      const topCtx = document.getElementById('topProductsChart');
+      if (topCtx) {
+        new Chart(topCtx.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels: this.topProducts.map(p => p.name),
+            datasets: [{
+              label: 'Количество',
+              data: this.topProducts.map(p => p.qty),
+              backgroundColor: [
+                'rgba(129, 140, 248, 0.4)',
+                'rgba(93, 202, 165, 0.4)',
+                'rgba(34, 211, 238, 0.4)',
+                'rgba(245, 158, 11, 0.4)',
+                'rgba(239, 68, 68, 0.4)',
+                'rgba(168, 85, 247, 0.4)',
+                'rgba(52, 211, 153, 0.4)'
+              ],
+              borderColor: [
+                '#818cf8',
+                '#5dcaa5',
+                '#22d3ee',
+                '#f59e0b',
+                '#ef4444',
+                '#a855f7',
+                '#34d399'
+              ],
+              borderWidth: 2,
+              borderRadius: 6
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: '#1e293b',
+                borderColor: '#334155',
+                borderWidth: 1,
+                titleColor: '#e2e8f0',
+                bodyColor: '#94a3b8',
+                callbacks: {
+                  label: function(ctx) {
+                    return ctx.parsed.x + ' шт.';
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: { color: 'rgba(255,255,255,0.05)' },
+                ticks: { color: '#64748b' }
+              },
+              y: {
+                grid: { display: false },
+                ticks: { color: '#94a3b8', font: { size: 11 } }
+              }
+            }
+          }
+        });
+      }
+    }
+  };
+}
+</script>
+
+<script src="components/shell.js"></script>
+</body>
+</html>

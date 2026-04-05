@@ -1,0 +1,75 @@
+{
+  "documents": [
+    {
+      "id": "DOC-001", "name": "Дилерский договор №142/2024", "category": "contract", "categoryLabel": "Договор",
+      "status": "signed", "statusLabel": "Подписан",
+      "date": "2024-01-15", "expiresAt": "2026-12-31",
+      "versions": [
+        { "version": "1.0", "date": "2024-01-15", "author": "Юр. отдел ТРЕК", "note": "Первоначальная версия" },
+        { "version": "1.1", "date": "2025-01-10", "author": "Юр. отдел ТРЕК", "note": "Обновлены условия оплаты" }
+      ]
+    },
+    {
+      "id": "DOC-002", "name": "Доп. соглашение о скидках", "category": "contract", "categoryLabel": "Договор",
+      "status": "pending_sign", "statusLabel": "На подпись",
+      "date": "2026-03-28", "expiresAt": null,
+      "versions": [
+        { "version": "1.0", "date": "2026-03-28", "author": "Коммерческий отдел", "note": "Новые условия на Q2 2026" }
+      ]
+    },
+    {
+      "id": "DOC-003", "name": "Прайс-лист апрель 2026", "category": "price", "categoryLabel": "Прайс-лист",
+      "status": "active", "statusLabel": "Актуален", "isNew": true,
+      "date": "2026-04-01", "expiresAt": "2026-04-30",
+      "priceChanges": [
+        { "sku": "TR-2108", "name": "Шаровая опора", "oldPrice": 850, "newPrice": 890, "direction": "up" },
+        { "sku": "TR-7701", "name": "Стойка стабилизатора", "oldPrice": 1600, "newPrice": 1600, "direction": "same" },
+        { "sku": "TR-4512", "name": "Рулевой наконечник", "oldPrice": 1250, "newPrice": 1200, "direction": "down" },
+        { "sku": "TR-6650", "name": "Рычаг подвески", "oldPrice": 2400, "newPrice": 2520, "direction": "up" },
+        { "sku": "TR-3305", "name": "Сайлентблок", "oldPrice": 450, "newPrice": 450, "direction": "same" }
+      ],
+      "versions": [
+        { "version": "1.0", "date": "2026-04-01", "author": "Коммерческий отдел", "note": "Прайс на апрель 2026" }
+      ]
+    },
+    {
+      "id": "DOC-004", "name": "Прайс-лист март 2026", "category": "price", "categoryLabel": "Прайс-лист",
+      "status": "archive", "statusLabel": "Архив",
+      "date": "2026-03-01", "expiresAt": "2026-03-31",
+      "versions": [
+        { "version": "1.0", "date": "2026-03-01", "author": "Коммерческий отдел", "note": "Прайс на март 2026" }
+      ]
+    },
+    {
+      "id": "DOC-005", "name": "Сертификат соответствия ГОСТ", "category": "certificate", "categoryLabel": "Сертификат",
+      "status": "signed", "statusLabel": "Действует",
+      "date": "2025-06-01", "expiresAt": "2026-06-01",
+      "versions": [
+        { "version": "1.0", "date": "2025-06-01", "author": "Отдел качества ТРЕК", "note": "Сертификат ГОСТ Р" }
+      ]
+    },
+    {
+      "id": "DOC-006", "name": "Акт сверки за Q1 2026", "category": "act", "categoryLabel": "Акт",
+      "status": "pending_approval", "statusLabel": "На согласовании",
+      "date": "2026-04-02", "expiresAt": null,
+      "versions": [
+        { "version": "1.0", "date": "2026-04-02", "author": "Бухгалтерия ТРЕК", "note": "Сверка за январь-март 2026" }
+      ]
+    },
+    {
+      "id": "DOC-007", "name": "Договор поставки истекает", "category": "contract", "categoryLabel": "Договор",
+      "status": "expiring", "statusLabel": "Истекает",
+      "date": "2023-05-01", "expiresAt": "2026-04-18",
+      "versions": [
+        { "version": "1.0", "date": "2023-05-01", "author": "Юр. отдел ТРЕК", "note": "Договор на доп. ассортимент" }
+      ]
+    }
+  ],
+  "categories": [
+    { "id": "contract", "label": "Договора" },
+    { "id": "price", "label": "Прайс-листы" },
+    { "id": "certificate", "label": "Сертификаты" },
+    { "id": "act", "label": "Акты" },
+    { "id": "invoice", "label": "Счета-фактуры" }
+  ]
+}
