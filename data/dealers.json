@@ -1,0 +1,61 @@
+{
+  "current": {
+    "id": "d001",
+    "name": "АвтоМир Групп",
+    "type": "distributor",
+    "typeLabel": "Дистрибьютор",
+    "level": "gold",
+    "levelLabel": "Золото",
+    "levelIcon": "⭐",
+    "points": 2840,
+    "nextLevel": "platinum",
+    "nextLevelLabel": "Платина",
+    "nextLevelPoints": 5000,
+    "rank": 4,
+    "monthOrders": 47,
+    "monthOrdersDelta": 12,
+    "monthSum": 2400000,
+    "monthSumDelta": 8.3,
+    "activeClaims": 3,
+    "overdueClaimCount": 1,
+    "achievements": [
+      { "id": "first_order", "name": "Первый заказ", "icon": "🎯", "earned": true, "date": "2024-03-15" },
+      { "id": "hundred_orders", "name": "100 заказов", "icon": "💯", "earned": true, "date": "2025-11-20" },
+      { "id": "perfect_quarter", "name": "Безупречный квартал", "icon": "🛡️", "earned": true, "date": "2026-01-01" },
+      { "id": "millionaire", "name": "Миллионер", "icon": "💰", "earned": true, "date": "2025-06-10" },
+      { "id": "speed", "name": "Скорость", "icon": "⚡", "earned": false, "date": null }
+    ],
+    "notifications": [
+      { "icon": "📦", "text": "Заказ #1042 отгружен", "time": "2 часа назад" },
+      { "icon": "📋", "text": "Новый прайс-лист от 01.04.2026", "time": "вчера" },
+      { "icon": "🏆", "text": "Вы достигли уровня Золото!", "time": "3 дня назад" },
+      { "icon": "⚠️", "text": "Рекламация #R-018 просрочена", "time": "5 дней назад" }
+    ]
+  },
+  "leaderboard": [
+    { "rank": 1, "name": "ЗапчастьОпт", "points": 4920, "level": "gold", "levelIcon": "⭐" },
+    { "rank": 2, "name": "АвтоЛидер", "points": 4100, "level": "gold", "levelIcon": "⭐" },
+    { "rank": 3, "name": "МоторТрейд", "points": 3500, "level": "gold", "levelIcon": "⭐" },
+    { "rank": 4, "name": "АвтоМир Групп", "points": 2840, "level": "gold", "levelIcon": "⭐", "current": true },
+    { "rank": 5, "name": "ХодовкаПро", "points": 2200, "level": "silver", "levelIcon": "🥈" },
+    { "rank": 6, "name": "СТО Мастер", "points": 1800, "level": "silver", "levelIcon": "🥈" },
+    { "rank": 7, "name": "Автосервис №1", "points": 1400, "level": "silver", "levelIcon": "🥈" },
+    { "rank": 8, "name": "ПодвескаСити", "points": 900, "level": "bronze", "levelIcon": "🥉" },
+    { "rank": 9, "name": "СТО Гараж", "points": 650, "level": "bronze", "levelIcon": "🥉" },
+    { "rank": 10, "name": "АвтоДок", "points": 320, "level": "bronze", "levelIcon": "🥉" }
+  ],
+  "levels": [
+    { "id": "bronze", "label": "Бронза", "icon": "🥉", "minPoints": 0, "discount": "0%", "perks": "Базовый доступ" },
+    { "id": "silver", "label": "Серебро", "icon": "🥈", "minPoints": 1000, "discount": "3%", "perks": "Доп. скидка 3%" },
+    { "id": "gold", "label": "Золото", "icon": "⭐", "minPoints": 2500, "discount": "5%", "perks": "Приоритетная отгрузка" },
+    { "id": "platinum", "label": "Платина", "icon": "💎", "minPoints": 5000, "discount": "8%", "perks": "Персональный менеджер" },
+    { "id": "diamond", "label": "Бриллиант", "icon": "👑", "minPoints": 10000, "discount": "12%", "perks": "VIP условия" }
+  ],
+  "pointRules": [
+    { "action": "Заказ оформлен", "points": 10 },
+    { "action": "Оплата вовремя", "points": 20 },
+    { "action": "0 рекламаций за месяц", "points": 50 },
+    { "action": "Прошёл обучение", "points": 30 },
+    { "action": "Объём > 500 тыс. ₽/мес", "points": 100 }
+  ]
+}
